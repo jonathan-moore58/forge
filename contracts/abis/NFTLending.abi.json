@@ -1,0 +1,388 @@
+{
+    "functions": [
+        {
+            "name": "createLoanRequest",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "paymentToken",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "interestBps",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "durationBlocks",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "cancelLoanRequest",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "fundLoan",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "repayLoan",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "claimDefaultedLoan",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getLoanDetails",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "borrower",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "lender",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "paymentToken",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "interestBps",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "durationBlocks",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "status",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "lendingStats",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "totalLoansCreated",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalLoansActive",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalLoanVolume",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalFeesCollected",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "getRepayAmount",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "repayAmount",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "getNextLoanId",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "nextLoanId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "setFeeRecipient",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [
+                {
+                    "name": "newRecipient",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "pause",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "unpause",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "LoanRequestCreated",
+            "values": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "borrower",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "paymentToken",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "interestBps",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "durationBlocks",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "LoanCancelled",
+            "values": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "borrower",
+                    "type": "ADDRESS"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "LoanFunded",
+            "values": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "lender",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "borrower",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "LoanRepaid",
+            "values": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "borrower",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "lender",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "repayAmount",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "LoanDefaulted",
+            "values": [
+                {
+                    "name": "loanId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "lender",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "TMOTO #2 — Fire",
+  "description": "MotoCat #2 (Fire edition). A unique Bitcoin NFT from the TMOTO collection on OPNet. Element: Fire. Mood: Fierce.",
+  "image": "ipfs://QmPFPDZjT1ciTPANZudfjeGrj7tjz8bpes9C9uLu4LnU6T/02-fire.png",
+  "attributes": [
+    {
+      "trait_type": "Edition",
+      "value": "Fire"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Fire"
+    },
+    {
+      "trait_type": "Mood",
+      "value": "Fierce"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 2
+    }
+  ]
+}

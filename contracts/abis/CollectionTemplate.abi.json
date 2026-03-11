@@ -1,0 +1,256 @@
+{
+    "functions": [
+        {
+            "name": "initialize",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "name",
+                    "type": "STRING"
+                },
+                {
+                    "name": "symbol",
+                    "type": "STRING"
+                },
+                {
+                    "name": "maxSupply",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "mintPrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "royaltyBps",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "royaltyRecipient",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "publicMint",
+            "type": "Function",
+            "payable": true,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "quantity",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "startTokenId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "airdrop",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "recipient",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "quantity",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "startTokenId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "setSalePhase",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "phase",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "setMintOpen",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "open",
+                    "type": "BOOL"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "setMintPrice",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "price",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "collectionOwner",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "currentPrice",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "price",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "isMintOpen",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "open",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "salePhase",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "phase",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "royaltyInfo",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "royaltyBps",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "royaltyRecipient",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "isInitialized",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "initialized",
+                    "type": "BOOL"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "Minted",
+            "values": [
+                {
+                    "name": "minter",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "quantity",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startTokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "to",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "PhaseChanged",
+            "values": [
+                {
+                    "name": "newPhase",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

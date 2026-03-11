@@ -1,0 +1,27 @@
+{
+  "name": "TMOTO #8 — Bubblegum",
+  "description": "MotoCat #8 (Bubblegum edition). A unique Bitcoin NFT from the TMOTO collection on OPNet. Element: Candy. Mood: Playful.",
+  "image": "ipfs://QmPFPDZjT1ciTPANZudfjeGrj7tjz8bpes9C9uLu4LnU6T/08-bubblegum.png",
+  "attributes": [
+    {
+      "trait_type": "Edition",
+      "value": "Bubblegum"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Candy"
+    },
+    {
+      "trait_type": "Mood",
+      "value": "Playful"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 8
+    }
+  ]
+}

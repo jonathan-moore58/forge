@@ -1,0 +1,35 @@
+{
+    "name": "@forge/contracts",
+    "version": "1.0.0",
+    "description": "FORGE NFT Launchpad + Marketplace Smart Contracts for OPNet",
+    "private": true,
+    "scripts": {
+        "build:factory": "asc src/index-factory.ts --config asconfig.json --target factory",
+        "build:collection": "asc src/index-collection.ts --config asconfig.json --target collection",
+        "build:marketplace": "asc src/index-marketplace.ts --config asconfig.json --target marketplace",
+        "build:auction": "asc src/index-auction.ts --config asconfig.json --target auction",
+        "build:staking": "asc src/index-staking.ts --config asconfig.json --target staking",
+        "build:registry": "asc src/index-registry.ts --config asconfig.json --target registry",
+        "build:lending": "asc src/index-lending.ts --config asconfig.json --target lending",
+        "build": "npm run build:factory && npm run build:collection && npm run build:marketplace && npm run build:auction && npm run build:staking && npm run build:registry && npm run build:lending",
+        "clean": "rm -rf build/*",
+        "deploy:testnet": "tsx scripts/deploy-testnet.ts"
+    },
+    "dependencies": {
+        "@btc-vision/as-bignum": "0.1.2",
+        "@btc-vision/btc-runtime": "rc"
+    },
+    "devDependencies": {
+        "@assemblyscript/loader": "latest",
+        "@btc-vision/assemblyscript": "^0.29.2",
+        "@btc-vision/bip32": "^7.1.2",
+        "@btc-vision/bitcoin": "^7.0.0-rc.6",
+        "@btc-vision/opnet-transform": "1.1.0",
+        "@btc-vision/transaction": "^1.8.0-rc.10",
+        "@eslint/js": "^9.39.2",
+        "bech32": "^2.0.0",
+        "eslint": "^9.39.2",
+        "opnet": "^1.8.1-rc.17",
+        "tsx": "^4.21.0"
+    }
+}

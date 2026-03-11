@@ -1,0 +1,27 @@
+{
+  "name": "TMOTO #5 — Royal",
+  "description": "MotoCat #5 (Royal edition). A unique Bitcoin NFT from the TMOTO collection on OPNet. Element: Arcane. Mood: Regal.",
+  "image": "ipfs://QmPFPDZjT1ciTPANZudfjeGrj7tjz8bpes9C9uLu4LnU6T/05-royal.png",
+  "attributes": [
+    {
+      "trait_type": "Edition",
+      "value": "Royal"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Epic"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Arcane"
+    },
+    {
+      "trait_type": "Mood",
+      "value": "Regal"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 5
+    }
+  ]
+}

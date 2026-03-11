@@ -1,0 +1,331 @@
+{
+    "functions": [
+        {
+            "name": "createPool",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "rewardToken",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "rewardPerBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "endBlock",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "poolId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "stake",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "poolId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "lockDurationBlocks",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "unstake",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "poolId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "rewardsClaimed",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "claimRewards",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "poolId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "setRarityMultiplier",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "poolId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "rarityTier",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "multiplierBps",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "setLockBonus",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [
+                {
+                    "name": "lockDurationBlocks",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "bonusBps",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getPool",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "poolId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "rewardToken",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "rewardPerBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "endBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalStaked",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "active",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getUserStakeInfo",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "poolId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "stakedCount",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "pendingRewards",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "lockEndBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "multiplier",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "stakingStats",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "totalPools",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalRewardsDistributed",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "pause",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "unpause",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "NFTStaked",
+            "values": [
+                {
+                    "name": "staker",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "poolId",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "NFTUnstaked",
+            "values": [
+                {
+                    "name": "staker",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "rewardsClaimed",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "RewardsClaimed",
+            "values": [
+                {
+                    "name": "staker",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

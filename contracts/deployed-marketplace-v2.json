@@ -1,0 +1,9 @@
+{
+  "network": "testnet",
+  "rpc": "https://testnet.opnet.org",
+  "oldMarketplace": "opt1sqpsl40d4t68uvzpzu7zaapmj5wrfrus4jskcm979",
+  "newMarketplace": "opt1sqqtgyxxfmjfnq9q2npgfaq3y6gthtxrvzqcnclrv",
+  "factory": "opt1sqqq34d94cf540p7mck6muzg4j9zp5hnttqmaxd97",
+  "treasury": "opt1pee9mrlhfxkmfqdssjsr8gwedewn2mgk08rrqla29rg0fjry29ths0cjdrz",
+  "deployedAt": "2026-03-01T09:02:44.031Z"
+}

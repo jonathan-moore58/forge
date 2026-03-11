@@ -1,0 +1,45 @@
+{
+    "name": "@forge/frontend",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@btc-vision/bip32": "latest",
+        "@btc-vision/bitcoin": "rc",
+        "@btc-vision/ecpair": "latest",
+        "@btc-vision/transaction": "rc",
+        "@btc-vision/walletconnect": "^1.10.3",
+        "@tanstack/react-query": "^5.62.0",
+        "@tsparticles/react": "^3.0.0",
+        "@tsparticles/slim": "^3.9.1",
+        "framer-motion": "^11.15.0",
+        "gsap": "^3.14.2",
+        "lenis": "^1.3.17",
+        "lightweight-charts": "^5.1.0",
+        "opnet": "rc",
+        "react": "^19.0.0",
+        "react-countup": "^6.5.3",
+        "react-dom": "^19.0.0",
+        "react-router-dom": "^7.0.0",
+        "recharts": "^2.15.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "@vitejs/plugin-react": "^4.3.0",
+        "crypto-browserify": "latest",
+        "stream-browserify": "latest",
+        "typescript": "^5.7.0",
+        "vite": "^6.0.0",
+        "vite-plugin-node-polyfills": "^0.23.0"
+    },
+    "overrides": {
+        "@noble/hashes": "2.0.1"
+    }
+}

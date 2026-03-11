@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #40",
+  "description": "An ancient guardian forged from obsidian and infused with Fire energy. Flat helm, Standard build, Slit eyes, Dense energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://QmaVAtQVQkhFtN8U65yho1XNhEWFfrgBFWUp1n6FVgjYSx",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Fire"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Flat"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Standard"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Slit"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Dense"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Frozen Void"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    }
+  ]
+}

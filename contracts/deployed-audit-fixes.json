@@ -1,0 +1,20 @@
+{
+  "network": "testnet",
+  "rpc": "https://testnet.opnet.org",
+  "fixes": "H2-H3 address encoding, C4 royalty events, H5 dead constant",
+  "old": {
+    "marketplace": "opt1sqqtgyxxfmjfnq9q2npgfaq3y6gthtxrvzqcnclrv",
+    "auctionHouse": "opt1sqqhkycklr6q4vs37gf2pjjl3mm729w9gh5tf7z37"
+  },
+  "new": {
+    "marketplace": "opt1sqryshl02q9g2cnhvnuqmx3s8luhp6kt8au4qy800",
+    "auctionHouse": "opt1sqzxvvkhrgk0wnvk7mhcuukn6essrdkhgny3tuka0"
+  },
+  "unchanged": {
+    "factory": "opt1sqqq34d94cf540p7mck6muzg4j9zp5hnttqmaxd97",
+    "template": "opt1sqqcxeylzfcnghw8ju0prcup8mezle9np2ufq8cx0",
+    "staking": "opt1sqz25ym058asfxwjy79aqv46vmalv2e35tuf63sx4",
+    "treasury": "opt1pee9mrlhfxkmfqdssjsr8gwedewn2mgk08rrqla29rg0fjry29ths0cjdrz"
+  },
+  "deployedAt": "2026-03-01T14:13:56.307Z"
+}

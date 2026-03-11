@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #6",
+  "description": "An ancient guardian forged from obsidian and infused with Void energy. Peaked helm, Standard build, Diamond eyes, Overcharged energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://QmVp5cQeK5JsJr2FJYVuSCeS6VhmD7Vw2ZHgQeX69vFxmU",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Void"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Peaked"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Standard"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Diamond"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Overcharged"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Volcanic Rift"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    }
+  ]
+}

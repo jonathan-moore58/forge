@@ -1,0 +1,52 @@
+{
+    "targets": {
+        "factory": {
+            "outFile": "build/NFTFactory.wasm",
+            "textFile": "build/NFTFactory.wat",
+            "abort": "index-factory/abort"
+        },
+        "collection": {
+            "outFile": "build/CollectionTemplate.wasm",
+            "textFile": "build/CollectionTemplate.wat",
+            "abort": "index-collection/abort"
+        },
+        "marketplace": {
+            "outFile": "build/Marketplace.wasm",
+            "textFile": "build/Marketplace.wat",
+            "abort": "index-marketplace/abort"
+        },
+        "auction": {
+            "outFile": "build/AuctionHouse.wasm",
+            "textFile": "build/AuctionHouse.wat",
+            "abort": "index-auction/abort"
+        },
+        "staking": {
+            "outFile": "build/StakingRewards.wasm",
+            "textFile": "build/StakingRewards.wat",
+            "abort": "index-staking/abort"
+        },
+        "registry": {
+            "outFile": "build/CollectionRegistry.wasm",
+            "textFile": "build/CollectionRegistry.wat",
+            "abort": "index-registry/abort"
+        },
+        "lending": {
+            "outFile": "build/NFTLending.wasm",
+            "textFile": "build/NFTLending.wat",
+            "abort": "index-lending/abort"
+        }
+    },
+    "options": {
+        "transform": "@btc-vision/opnet-transform",
+        "sourceMap": false,
+        "optimizeLevel": 3,
+        "shrinkLevel": 2,
+        "converge": true,
+        "noAssert": true,
+        "runtime": "stub",
+        "memoryBase": 0,
+        "initialMemory": 16,
+        "maximumMemory": 512,
+        "exportStart": "start"
+    }
+}

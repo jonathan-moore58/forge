@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #14",
+  "description": "An ancient guardian forged from obsidian and infused with Fire energy. Spiked helm, Heavy build, Angular eyes, Overcharged energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://QmQSQPH9Ym1ZEPU9yBZsTSNgA93rmVimjh3JD1dxZGSvKP",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Fire"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Spiked"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Heavy"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Angular"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Overcharged"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Frozen Void"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    }
+  ]
+}

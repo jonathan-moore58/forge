@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #45",
+  "description": "An ancient guardian forged from obsidian and infused with Eclipse energy. Spiked helm, Standard build, Angular eyes, Standard energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://QmW5jb5cUCpn2W77CL2Q185ZoGKqWRAwiDZn5JyTqDgMDM",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Eclipse"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Spiked"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Standard"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Angular"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Standard"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Volcanic Rift"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Epic"
+    }
+  ]
+}

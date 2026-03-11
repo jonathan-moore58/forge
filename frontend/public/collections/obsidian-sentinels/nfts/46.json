@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #46",
+  "description": "An ancient guardian forged from obsidian and infused with Phantom energy. Flat helm, Titan build, Diamond eyes, Sparse energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://QmUWuaoJDg2YUyRoiC6jRuaYWncBBU1U6LUtyUR8W2cJA7",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Phantom"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Flat"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Titan"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Diamond"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Sparse"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Frozen Void"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Legendary"
+    }
+  ]
+}

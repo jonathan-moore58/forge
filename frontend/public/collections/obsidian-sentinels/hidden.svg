@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#120a04"/>
+      <stop offset="100%" stop-color="#080604"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="pulse">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- Pulsing glow -->
+  <circle cx="256" cy="240" r="80" fill="#FF6B00" opacity="0.06" filter="url(#pulse)">
+    <animate attributeName="r" values="80;100;80" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.06;0.1;0.06" dur="3s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Mystery silhouette -->
+  <g opacity="0.25">
+    <path d="M256 120 L220 155 L205 250 L210 370 L235 410 L277 410 L302 370 L307 250 L292 155Z"
+          fill="#111" stroke="#1a1a1a" stroke-width="1"/>
+    <!-- Shoulder hints -->
+    <path d="M205 200 L190 215 L195 260 L205 260Z" fill="#0e0e0e"/>
+    <path d="M307 200 L322 215 L317 260 L307 260Z" fill="#0e0e0e"/>
+  </g>
+
+  <!-- Glowing eyes only -->
+  <g filter="url(#glow)">
+    <ellipse cx="238" cy="195" rx="8" ry="5" fill="#FF6B00" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2.5s" repeatCount="indefinite"/>
+    </ellipse>
+    <ellipse cx="274" cy="195" rx="8" ry="5" fill="#FF6B00" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2.5s" repeatCount="indefinite"/>
+    </ellipse>
+  </g>
+
+  <!-- Question mark -->
+  <text x="256" y="330" text-anchor="middle" font-family="monospace" font-size="48" font-weight="700" fill="#FF6B00" opacity="0.3" filter="url(#glow)">?</text>
+
+  <!-- "UNREVEALED" label -->
+  <text x="256" y="460" text-anchor="middle" font-family="monospace" font-size="14" font-weight="600" fill="#FF6B00" opacity="0.4" letter-spacing="6">UNREVEALED</text>
+
+  <!-- Border -->
+  <rect x="4" y="4" width="504" height="504" rx="16" fill="none" stroke="#FF6B00" stroke-width="1" opacity="0.08"/>
+</svg>

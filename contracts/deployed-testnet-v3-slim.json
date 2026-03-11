@@ -1,0 +1,10 @@
+{
+  "network": "testnet",
+  "rpc": "https://testnet.opnet.org",
+  "contracts": {
+    "template": "opt1sqrjck2ay2ketjfury3d4ewgcp3qtl2fw3cy2jr9s",
+    "factory": "opt1sqquz6n9935t60ttc825769n6qrgnytvhryzrymy3"
+  },
+  "version": "v3-slim",
+  "deployedAt": "2026-02-27T19:56:41.075Z"
+}

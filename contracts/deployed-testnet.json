@@ -1,0 +1,15 @@
+{
+  "network": "testnet",
+  "rpc": "https://testnet.opnet.org",
+  "treasury": "opt1pee9mrlhfxkmfqdssjsr8gwedewn2mgk08rrqla29rg0fjry29ths0cjdrz",
+  "contracts": {
+    "template": "opt1sqp8wuaggm9zwcjkwmqgprgnaqv3ahpxhu5rnmkqc",
+    "factory": "opt1sqqewmpmd2vwg67fflwdmu202nwhajrqw2yd9esez",
+    "marketplace": "opt1sqrj0pqrzjvytds6l09r8n3mpfwzp0qpqsgy6a70q",
+    "auctionHouse": "opt1sqrnk0fma3tkpkfgpsqswhcn5n5zhpcmdnyeanrf3",
+    "staking": "opt1sqrnqrnxwcyg6ge6f6j2efhmsjfg6xa7u6yyhs6rz",
+    "lending": "opt1sqp49e6ftwtpt8f9sc8plzqu5rtdrp7zn05wyjzrp"
+  },
+  "note": "2-TX flow: TX1 factory.createCollection(salt), TX2 collection.initialize(11 params).",
+  "deployedAt": "2026-03-09T19:11:15.029Z"
+}

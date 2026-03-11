@@ -1,0 +1,27 @@
+{
+    "name": "forge-indexer",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "tsx watch src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "db:reset": "tsx src/db/seed.ts"
+    },
+    "dependencies": {
+        "express": "^4.21.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.0",
+        "opnet": "rc",
+        "@btc-vision/transaction": "rc",
+        "@btc-vision/bitcoin": "rc"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.0",
+        "tsx": "^4.7.0",
+        "@types/express": "^5.0.0",
+        "@types/cors": "^2.8.0",
+        "@types/node": "^24.0.0"
+    }
+}

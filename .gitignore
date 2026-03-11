@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+*.wasm
+.env
+*.db
+*.db-journal
+.claude/loop/

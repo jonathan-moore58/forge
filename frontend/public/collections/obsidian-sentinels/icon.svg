@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a1008"/>
+      <stop offset="100%" stop-color="#080604"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="45%" r="35%">
+      <stop offset="0%" stop-color="#FF6B00" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#FF6B00" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="helmet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2a2a"/>
+      <stop offset="50%" stop-color="#0d0d0d"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    <linearGradient id="vein1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF6B00"/>
+      <stop offset="50%" stop-color="#FF9500"/>
+      <stop offset="100%" stop-color="#FF6B00"/>
+    </linearGradient>
+    <filter id="glowFilter">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="innerGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="circleClip">
+      <circle cx="256" cy="256" r="240"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" fill="url(#bg)" rx="64"/>
+
+  <!-- Ambient glow -->
+  <circle cx="256" cy="230" r="200" fill="url(#glow)"/>
+
+  <!-- Helmet shape — angular obsidian mask -->
+  <g clip-path="url(#circleClip)">
+    <!-- Main helmet body -->
+    <path d="M256 80 L180 140 L155 220 L160 310 L190 370 L230 400 L256 410 L282 400 L322 370 L352 310 L357 220 L332 140 Z"
+          fill="url(#helmet)" stroke="#1f1f1f" stroke-width="2"/>
+
+    <!-- Left face plate -->
+    <path d="M256 80 L180 140 L160 240 L200 280 L256 260 Z" fill="#151515" stroke="#1a1a1a" stroke-width="1"/>
+    <!-- Right face plate -->
+    <path d="M256 80 L332 140 L352 240 L312 280 L256 260 Z" fill="#181818" stroke="#1a1a1a" stroke-width="1"/>
+
+    <!-- Eyes — glowing slits -->
+    <g filter="url(#glowFilter)">
+      <path d="M195 195 L230 188 L235 200 L200 210 Z" fill="#FF6B00"/>
+      <path d="M317 195 L282 188 L277 200 L312 210 Z" fill="#FF6B00"/>
+    </g>
+    <!-- Eye inner bright core -->
+    <path d="M205 198 L225 193 L228 200 L208 206 Z" fill="#FFAA44"/>
+    <path d="M307 198 L287 193 L284 200 L304 206 Z" fill="#FFAA44"/>
+
+    <!-- Energy veins — left side -->
+    <g filter="url(#innerGlow)" opacity="0.9">
+      <!-- Forehead crack -->
+      <path d="M256 95 L248 130 L252 165 L256 180" fill="none" stroke="url(#vein1)" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Left cheek veins -->
+      <path d="M195 195 L185 240 L190 290 L205 330" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+      <path d="M185 240 L175 260 L180 285" fill="none" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+      <!-- Right cheek veins -->
+      <path d="M317 195 L327 240 L322 290 L307 330" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+      <path d="M327 240 L337 260 L332 285" fill="none" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+      <!-- Center vein down -->
+      <path d="M256 260 L254 300 L256 340 L250 370" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+      <path d="M256 260 L258 300 L256 340 L262 370" fill="none" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+      <!-- Forehead branches -->
+      <path d="M248 130 L230 145 L220 170" fill="none" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+      <path d="M252 130 L270 145 L280 170" fill="none" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+    </g>
+
+    <!-- Nose ridge -->
+    <path d="M256 180 L250 230 L256 260 L262 230 Z" fill="#111" stroke="#1a1a1a" stroke-width="0.5"/>
+
+    <!-- Jaw line highlights -->
+    <path d="M190 370 L230 400 L256 410 L282 400 L322 370" fill="none" stroke="#252525" stroke-width="1.5"/>
+
+    <!-- Subtle reflection -->
+    <path d="M200 130 L240 110 L256 100" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.15"/>
+  <circle cx="256" cy="256" r="244" fill="none" stroke="#FF6B00" stroke-width="0.5" opacity="0.08"/>
+</svg>

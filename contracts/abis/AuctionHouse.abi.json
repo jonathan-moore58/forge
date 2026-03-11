@@ -1,0 +1,347 @@
+{
+    "functions": [
+        {
+            "name": "createEnglishAuction",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startPrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "reservePrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "durationBlocks",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "createDutchAuction",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startPrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "endPrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "durationBlocks",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "placeBid",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "bidAmount",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "buyDutchAuction",
+            "type": "Function",
+            "payable": true,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "settleAuction",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "cancelAuction",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getAuction",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "seller",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "auctionType",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "status",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "endBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startPrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "reservePrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "highestBid",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "highestBidder",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "bidCount",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "getCurrentDutchPrice",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "currentPrice",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "auctionStats",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "totalAuctions",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalSettled",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalVolume",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "pause",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "unpause",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": true,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "AuctionCreated",
+            "values": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "seller",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collection",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "startPrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "endBlock",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "BidPlaced",
+            "values": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "bidder",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "newEndBlock",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "AuctionSettled",
+            "values": [
+                {
+                    "name": "auctionId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "winner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "finalPrice",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

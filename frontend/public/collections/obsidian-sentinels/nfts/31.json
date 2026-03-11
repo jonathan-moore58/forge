@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #31",
+  "description": "An ancient guardian forged from obsidian and infused with Void energy. Crown helm, Lean build, Round eyes, Standard energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://Qma9XkPV7pALFCLHhuPN7a8GQ4i7k6PZfVzD1fa3eSuXsE",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Void"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Crown"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Lean"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Round"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Standard"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Ash Wastes"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    }
+  ]
+}

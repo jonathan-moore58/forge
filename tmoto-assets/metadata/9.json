@@ -1,0 +1,27 @@
+{
+  "name": "TMOTO #9 — Ocean",
+  "description": "MotoCat #9 (Ocean edition). A unique Bitcoin NFT from the TMOTO collection on OPNet. Element: Water. Mood: Calm.",
+  "image": "ipfs://QmPFPDZjT1ciTPANZudfjeGrj7tjz8bpes9C9uLu4LnU6T/09-ocean.png",
+  "attributes": [
+    {
+      "trait_type": "Edition",
+      "value": "Ocean"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Water"
+    },
+    {
+      "trait_type": "Mood",
+      "value": "Calm"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 9
+    }
+  ]
+}

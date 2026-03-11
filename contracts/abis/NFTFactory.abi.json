@@ -1,0 +1,122 @@
+{
+    "functions": [
+        {
+            "name": "setTemplate",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "templateAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "createCollection",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "salt",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "registerCollection",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "collectionId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "isRegistered",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "registered",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "collectionCount",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "count",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "getTemplate",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "templateAddress",
+                    "type": "ADDRESS"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "CollectionCreated",
+            "values": [
+                {
+                    "name": "creator",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collectionId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "TMOTO #16 — Plasma",
+  "description": "MotoCat #16 (Plasma edition). A unique Bitcoin NFT from the TMOTO collection on OPNet. Element: Energy. Mood: Unstable.",
+  "image": "ipfs://QmPFPDZjT1ciTPANZudfjeGrj7tjz8bpes9C9uLu4LnU6T/16-plasma.png",
+  "attributes": [
+    {
+      "trait_type": "Edition",
+      "value": "Plasma"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Legendary"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Energy"
+    },
+    {
+      "trait_type": "Mood",
+      "value": "Unstable"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 16
+    }
+  ]
+}

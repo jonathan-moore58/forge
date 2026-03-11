@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #10",
+  "description": "An ancient guardian forged from obsidian and infused with Frost energy. Horned helm, Lean build, Round eyes, Sparse energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://QmbyFhmhfpDcL8LH8sdi7ZKXwQBuRknnHmg334ar5YoPLe",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Frost"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Horned"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Lean"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Round"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Sparse"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Ash Wastes"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    }
+  ]
+}

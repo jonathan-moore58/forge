@@ -1,0 +1,27 @@
+{
+  "name": "TMOTO #17 — Rust",
+  "description": "MotoCat #17 (Rust edition). A unique Bitcoin NFT from the TMOTO collection on OPNet. Element: Earth. Mood: Rugged.",
+  "image": "ipfs://QmPFPDZjT1ciTPANZudfjeGrj7tjz8bpes9C9uLu4LnU6T/17-rust.png",
+  "attributes": [
+    {
+      "trait_type": "Edition",
+      "value": "Rust"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Earth"
+    },
+    {
+      "trait_type": "Mood",
+      "value": "Rugged"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 17
+    }
+  ]
+}

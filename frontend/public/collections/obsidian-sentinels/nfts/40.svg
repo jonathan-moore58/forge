@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg"><stop offset="0%" stop-color="#061018"/><stop offset="100%" stop-color="#040608"/></radialGradient>
+    <radialGradient id="aura" cx="50%" cy="40%" r="40%"><stop offset="0%" stop-color="#FF4500" stop-opacity="0.15"/><stop offset="100%" stop-color="#FF4500" stop-opacity="0"/></radialGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#222"/><stop offset="100%" stop-color="#0a0a0a"/></linearGradient>
+    <filter id="glow"><feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="auraF"><feGaussianBlur in="SourceGraphic" stdDeviation="10"/></filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="176" r="150" fill="url(#aura)"/>
+
+  <!-- Body -->
+  <path d="M214 146 L196 186 L201 336 L226 366 L286 366 L311 336 L316 186 L298 146Z" fill="url(#stone)" stroke="#1a1a1a" stroke-width="1"/>
+
+  <!-- Shoulder pads -->
+  <path d="M214 146 L194 161 L199 196 L214 196Z" fill="#161616"/>
+  <path d="M298 146 L318 161 L313 196 L298 196Z" fill="#161616"/>
+
+  <!-- Helm -->
+  <path d="M223 106 L223 146 L289 146 L289 106Z" fill="#181818" stroke="#222" stroke-width="1"/>
+
+  <!-- Eyes -->
+  <g fill="#FF6B00" filter="url(#glow)">
+    <path d="M230 131 L238 128 L246 131 L238 134Z"/>
+    <path d="M266 131 L274 128 L282 131 L274 134Z"/>
+  </g>
+  <g fill="#FF9500" opacity="0.7">
+    <path d="M230 131 L238 128 L246 131 L238 134Z"/>
+    <path d="M266 131 L274 128 L282 131 L274 134Z"/>
+  </g>
+
+  <!-- Energy veins -->
+  <g filter="url(#glow)">
+    <!-- Center spine -->
+    <path d="M256 146 L254 216 L257 286 L255 326" fill="none" stroke="#FF6B00" stroke-width="2" opacity="0.6"/>
+    <path d="M215 175 L217 210 L229 248" fill="none" stroke="#FF6B00" stroke-width="2.4" stroke-linecap="round" opacity="0.67"/>
+      <path d="M284 137 L294 182 L305 233 L325 270 L339 310" fill="none" stroke="#FF6B00" stroke-width="2.0" stroke-linecap="round" opacity="0.74"/>
+      <path d="M339 310 L316 332" fill="none" stroke="#FF6B00" stroke-width="1.2" stroke-linecap="round" opacity="0.52"/>
+      <path d="M265 136 L283 171 L296 201" fill="none" stroke="#FF6B00" stroke-width="1.7" stroke-linecap="round" opacity="0.35"/>
+      <path d="M198 160 L179 213 L178 258 L193 302" fill="none" stroke="#FF6B00" stroke-width="1.2" stroke-linecap="round" opacity="0.34"/>
+      <path d="M241 172 L258 223 L247 268 L228 300" fill="none" stroke="#FF6B00" stroke-width="1.8" stroke-linecap="round" opacity="0.40"/>
+      <path d="M228 300 L244 335" fill="none" stroke="#FF6B00" stroke-width="1.1" stroke-linecap="round" opacity="0.28"/>
+      <path d="M278 167 L298 197 L283 234 L298 285 L283 317" fill="none" stroke="#FF6B00" stroke-width="1.3" stroke-linecap="round" opacity="0.57"/>
+      <path d="M203 152 L196 210 L198 246" fill="none" stroke="#FF6B00" stroke-width="1.7" stroke-linecap="round" opacity="0.64"/>
+      <path d="M198 246 L208 277" fill="none" stroke="#FF6B00" stroke-width="1.0" stroke-linecap="round" opacity="0.45"/>
+      <path d="M219 141 L218 188 L224 241 L217 278 L213 321" fill="none" stroke="#FF6B00" stroke-width="1.3" stroke-linecap="round" opacity="0.38"/>
+      
+  </g>
+
+  <path d="M256 211 L268 226 L256 241 L244 226Z" fill="none" stroke="#FF9500" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Particles -->
+  <circle cx="288" cy="220" r="2.3" fill="#FF6B00" opacity="0.22"/>
+      <circle cx="346" cy="153" r="1.2" fill="#FF6B00" opacity="0.46"/>
+      <circle cx="214" cy="207" r="1.3" fill="#FF6B00" opacity="0.32"/>
+      <circle cx="319" cy="339" r="2.8" fill="#FF6B00" opacity="0.22"/>
+      <circle cx="205" cy="148" r="2.5" fill="#FF6B00" opacity="0.32"/>
+      <circle cx="329" cy="362" r="1.6" fill="#FF6B00" opacity="0.30"/>
+      <circle cx="212" cy="130" r="2.7" fill="#FF6B00" opacity="0.42"/>
+      <circle cx="295" cy="197" r="1.4" fill="#FF6B00" opacity="0.32"/>
+      
+
+  <!-- Ambient glow at feet -->
+  <ellipse cx="256" cy="371" rx="70" ry="15" fill="#FF4500" opacity="0.08" filter="url(#auraF)"/>
+
+  <!-- Border ring -->
+  <rect x="4" y="4" width="504" height="504" rx="16" fill="none" stroke="#FF6B00" stroke-width="1" opacity="0.1"/>
+</svg>

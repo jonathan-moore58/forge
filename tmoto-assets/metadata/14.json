@@ -1,0 +1,27 @@
+{
+  "name": "TMOTO #14 — Jungle",
+  "description": "MotoCat #14 (Jungle edition). A unique Bitcoin NFT from the TMOTO collection on OPNet. Element: Nature. Mood: Wild.",
+  "image": "ipfs://QmPFPDZjT1ciTPANZudfjeGrj7tjz8bpes9C9uLu4LnU6T/14-jungle.png",
+  "attributes": [
+    {
+      "trait_type": "Edition",
+      "value": "Jungle"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Nature"
+    },
+    {
+      "trait_type": "Mood",
+      "value": "Wild"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 14
+    }
+  ]
+}

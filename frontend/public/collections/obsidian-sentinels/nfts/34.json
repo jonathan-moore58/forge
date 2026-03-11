@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #34",
+  "description": "An ancient guardian forged from obsidian and infused with Void energy. Spiked helm, Standard build, Round eyes, Standard energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://QmbwNaKPRCou4vBRd69EAGkJHVeBQwziVjaXjyJB1FUT1Q",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Void"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Spiked"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Standard"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Round"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Standard"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Obsidian Cavern"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    }
+  ]
+}

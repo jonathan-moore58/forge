@@ -1,0 +1,27 @@
+{
+  "name": "TMOTO #13 — Arctic",
+  "description": "MotoCat #13 (Arctic edition). A unique Bitcoin NFT from the TMOTO collection on OPNet. Element: Ice. Mood: Serene.",
+  "image": "ipfs://QmPFPDZjT1ciTPANZudfjeGrj7tjz8bpes9C9uLu4LnU6T/13-arctic.png",
+  "attributes": [
+    {
+      "trait_type": "Edition",
+      "value": "Arctic"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    },
+    {
+      "trait_type": "Element",
+      "value": "Ice"
+    },
+    {
+      "trait_type": "Mood",
+      "value": "Serene"
+    },
+    {
+      "trait_type": "Token ID",
+      "value": 13
+    }
+  ]
+}

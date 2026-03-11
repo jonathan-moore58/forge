@@ -1,0 +1,35 @@
+{
+  "name": "Obsidian Sentinel #19",
+  "description": "An ancient guardian forged from obsidian and infused with Venom energy. Peaked helm, Standard build, Round eyes, Sparse energy veins. One of 50 sentinels standing watch over the Bitcoin blockchain.",
+  "image": "ipfs://QmaD4H1ES1EKw6gouG6j3XJUMkC9DPTcZL4ccXiqBnKmqa",
+  "attributes": [
+    {
+      "trait_type": "Element",
+      "value": "Venom"
+    },
+    {
+      "trait_type": "Helm",
+      "value": "Peaked"
+    },
+    {
+      "trait_type": "Build",
+      "value": "Standard"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Round"
+    },
+    {
+      "trait_type": "Vein Density",
+      "value": "Sparse"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Obsidian Cavern"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    }
+  ]
+}

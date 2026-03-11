@@ -1,0 +1,44 @@
+{
+  "name": "Obsidian Sentinels",
+  "symbol": "OBSN",
+  "description": "Ancient guardians forged from obsidian and infused with elemental energy. 50 unique sentinels standing watch over the Bitcoin blockchain. Each sentinel features randomized elements, helms, builds, eye shapes, and energy vein patterns across 6 rarities.",
+  "image": "icon.svg",
+  "banner_image": "banner.svg",
+  "external_url": "https://forge.opnet.org",
+  "seller_fee_basis_points": 500,
+  "fee_recipient": "",
+
+  "deployment": {
+    "maxSupply": 50,
+    "mintPrice": 10000,
+    "mintPriceNote": "10,000 sats = 0.0001 BTC",
+    "royaltyBps": 500,
+    "royaltyNote": "5% royalty on secondary sales",
+
+    "_uriDesign": "OP721 tokenURI() returns: baseURI + tokenId.toString(). Files in IPFS folder must be named 1, 2, 3 (NO .json extension).",
+
+    "hiddenURI": "ipfs://Qme73mG6wu7rt8nGKG33UAcijQQpTS1qLKmLdUbF6d3XSx/",
+    "hiddenURINote": "Folder of 50 identical hidden metadata JSONs (uploaded & pinned)",
+    "hiddenImageCID": "QmWFevwmW2A7u2j5sBeS4DDiXKLe3eWmbaFHBCG5jasTkK",
+
+    "revealBaseURI": "ipfs://QmfR7ZspP4UaHBMUXWTuw4SFDwZ7SF5Y7aNxLbubv89mCH/",
+    "revealBaseURINote": "Folder of 50 real metadata JSONs (uploaded & pinned). Use with setBaseURI() to reveal.",
+
+    "baseURI_local": "http://localhost:5193/collections/obsidian-sentinels/nfts/",
+    "baseURI_localNote": "For local dev only — files need to be accessible as /nfts/1, /nfts/2 etc.",
+
+    "salePhase": 2,
+    "salePhaseNote": "0=INACTIVE, 1=WHITELIST, 2=PUBLIC, 3=ENDED",
+    "maxPerWallet": 5
+  },
+
+  "traits": {
+    "Element": ["Fire (40%)", "Void (22%)", "Frost (18%)", "Venom (14%)", "Eclipse (2%)", "Phantom (4%)"],
+    "Helm": ["Peaked", "Flat", "Horned", "Crown", "Spiked"],
+    "Build": ["Lean", "Standard", "Heavy", "Titan"],
+    "Eyes": ["Slit", "Diamond", "Round", "Angular"],
+    "Vein Density": ["Sparse", "Standard", "Dense", "Overcharged"],
+    "Background": ["Obsidian Cavern", "Volcanic Rift", "Deep Abyss", "Ash Wastes", "Frozen Void"],
+    "Rarity": ["Common (40%)", "Uncommon (40%)", "Rare (14%)", "Epic (2%)", "Legendary (4%)"]
+  }
+}

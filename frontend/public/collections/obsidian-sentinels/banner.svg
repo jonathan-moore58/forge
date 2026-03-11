@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1536 512" width="1536" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0605"/>
+      <stop offset="40%" stop-color="#120a04"/>
+      <stop offset="100%" stop-color="#1a0c02"/>
+    </linearGradient>
+    <radialGradient id="lavaGlow" cx="50%" cy="100%" r="60%">
+      <stop offset="0%" stop-color="#FF6B00" stop-opacity="0.25"/>
+      <stop offset="60%" stop-color="#FF4500" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#FF4500" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#222"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6"/>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="bigGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12"/>
+    </filter>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1536" height="512" fill="url(#sky)"/>
+
+  <!-- Stars -->
+  <g opacity="0.3">
+    <circle cx="120" cy="40" r="1" fill="#fff"/><circle cx="340" cy="65" r="0.8" fill="#fff"/>
+    <circle cx="580" cy="30" r="1.2" fill="#fff"/><circle cx="780" cy="55" r="0.7" fill="#fff"/>
+    <circle cx="950" cy="25" r="1" fill="#fff"/><circle cx="1150" cy="50" r="0.9" fill="#fff"/>
+    <circle cx="1380" cy="35" r="1.1" fill="#fff"/><circle cx="200" cy="80" r="0.6" fill="#fff"/>
+    <circle cx="450" cy="45" r="0.8" fill="#fff"/><circle cx="700" cy="70" r="0.7" fill="#fff"/>
+    <circle cx="1050" cy="40" r="0.9" fill="#fff"/><circle cx="1280" cy="75" r="0.7" fill="#fff"/>
+  </g>
+
+  <!-- Mountain range background -->
+  <path d="M0 350 L80 280 L160 310 L280 250 L380 290 L450 230 L550 270 L650 220 L750 260 L850 200 L950 250 L1050 210 L1150 260 L1250 230 L1350 270 L1450 240 L1536 280 L1536 512 L0 512Z"
+        fill="#0e0e0e" opacity="0.8"/>
+
+  <!-- Lava glow from ground -->
+  <rect y="380" width="1536" height="132" fill="url(#lavaGlow)"/>
+
+  <!-- Ground / lava rivers -->
+  <path d="M0 430 Q200 420 300 435 Q500 450 700 425 Q900 410 1100 440 Q1300 455 1536 430 L1536 512 L0 512Z"
+        fill="#0d0805"/>
+  <!-- Lava streams -->
+  <g filter="url(#glow)" opacity="0.7">
+    <path d="M180 460 Q250 450 350 465 Q420 475 500 455" fill="none" stroke="#FF4500" stroke-width="3"/>
+    <path d="M650 470 Q750 455 850 468 Q920 478 1000 460" fill="none" stroke="#FF4500" stroke-width="2.5"/>
+    <path d="M1100 465 Q1200 450 1300 470 Q1380 480 1450 462" fill="none" stroke="#FF4500" stroke-width="2"/>
+  </g>
+  <!-- Lava bright cores -->
+  <g opacity="0.5">
+    <path d="M200 460 Q280 452 380 463" fill="none" stroke="#FF9500" stroke-width="1.5"/>
+    <path d="M700 468 Q780 457 870 466" fill="none" stroke="#FF9500" stroke-width="1.2"/>
+    <path d="M1130 464 Q1220 453 1320 468" fill="none" stroke="#FF9500" stroke-width="1"/>
+  </g>
+
+  <!-- Sentinel 1 (far left) -->
+  <g transform="translate(100, 0)" opacity="0.5">
+    <path d="M60 200 L40 220 L30 300 L35 380 L55 420 L65 420 L85 380 L90 300 L80 220Z" fill="url(#stone)"/>
+    <path d="M46 260 L50 255 L54 260 L50 262Z" fill="#FF6B00" filter="url(#softGlow)" opacity="0.6"/>
+    <path d="M66 260 L70 255 L74 260 L70 262Z" fill="#FF6B00" filter="url(#softGlow)" opacity="0.6"/>
+    <path d="M50 280 L48 320 L52 350" fill="none" stroke="#FF6B00" stroke-width="1" opacity="0.4"/>
+  </g>
+
+  <!-- Sentinel 2 -->
+  <g transform="translate(300, 0)" opacity="0.65">
+    <path d="M70 160 L45 190 L30 290 L35 390 L55 440 L85 440 L105 390 L110 290 L95 190Z" fill="url(#stone)"/>
+    <rect x="42" y="180" width="56" height="5" fill="#151515" rx="1"/>
+    <path d="M52 240 L58 232 L64 240 L58 244Z" fill="#FF6B00" filter="url(#softGlow)" opacity="0.7"/>
+    <path d="M76 240 L82 232 L88 240 L82 244Z" fill="#FF6B00" filter="url(#softGlow)" opacity="0.7"/>
+    <path d="M60 260 L58 310 L62 360" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+    <path d="M80 260 L82 310 L78 360" fill="none" stroke="#FF6B00" stroke-width="1" opacity="0.4"/>
+  </g>
+
+  <!-- Sentinel 3 (main left) -->
+  <g transform="translate(530, 0)" opacity="0.85">
+    <path d="M80 120 L48 155 L28 270 L32 400 L60 460 L100 460 L128 400 L132 270 L112 155Z" fill="url(#stone)"/>
+    <rect x="44" y="145" width="72" height="6" fill="#181818" rx="2"/>
+    <!-- Shoulder plates -->
+    <path d="M28 200 L10 220 L15 270 L28 270Z" fill="#1a1a1a"/>
+    <path d="M132 200 L150 220 L145 270 L132 270Z" fill="#1a1a1a"/>
+    <!-- Eyes -->
+    <path d="M58 215 L68 207 L74 218 L64 224Z" fill="#FF6B00" filter="url(#softGlow)"/>
+    <path d="M90 215 L100 207 L106 218 L96 224Z" fill="#FF6B00" filter="url(#softGlow)"/>
+    <!-- Veins -->
+    <path d="M80 155 L78 200 L80 250 L76 320 L80 380" fill="none" stroke="#FF6B00" stroke-width="2" opacity="0.6"/>
+    <path d="M68 207 L55 250 L50 310 L55 370" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+    <path d="M100 207 L110 250 L115 310 L110 370" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+    <path d="M78 250 L60 270 L45 300" fill="none" stroke="#FF6B00" stroke-width="1" opacity="0.35"/>
+  </g>
+
+  <!-- Sentinel 4 (CENTER — largest, most detailed) -->
+  <g transform="translate(730, 0)">
+    <path d="M100 70 L55 115 L28 250 L32 410 L65 480 L135 480 L168 410 L172 250 L145 115Z" fill="url(#stone)" stroke="#1f1f1f" stroke-width="1"/>
+    <!-- Crown/helm detail -->
+    <path d="M100 70 L88 80 L82 100 L100 90 L118 100 L112 80Z" fill="#1a1a1a"/>
+    <rect x="50" y="108" width="100" height="8" fill="#181818" rx="3"/>
+    <!-- Shoulder armor -->
+    <path d="M28 180 L0 210 L5 280 L28 280Z" fill="#1a1a1a" stroke="#222" stroke-width="0.5"/>
+    <path d="M172 180 L200 210 L195 280 L172 280Z" fill="#1a1a1a" stroke="#222" stroke-width="0.5"/>
+    <!-- Chest plate -->
+    <path d="M65 280 L100 260 L135 280 L130 350 L100 370 L70 350Z" fill="#141414" stroke="#1a1a1a" stroke-width="0.5"/>
+    <!-- Eyes — brightest -->
+    <g filter="url(#softGlow)">
+      <path d="M68 185 L85 172 L92 190 L75 200Z" fill="#FF6B00"/>
+      <path d="M132 185 L115 172 L108 190 L125 200Z" fill="#FF6B00"/>
+    </g>
+    <!-- Eye cores -->
+    <path d="M74 188 L82 180 L86 190 L78 196Z" fill="#FFB84D"/>
+    <path d="M126 188 L118 180 L114 190 L122 196Z" fill="#FFB84D"/>
+    <!-- Major energy veins -->
+    <g filter="url(#softGlow)" opacity="0.85">
+      <path d="M100 90 L98 140 L100 190 L96 260 L100 340 L95 410" fill="none" stroke="#FF6B00" stroke-width="2.5"/>
+      <path d="M75 200 L60 260 L50 330 L55 400" fill="none" stroke="#FF6B00" stroke-width="2" opacity="0.7"/>
+      <path d="M125 200 L140 260 L150 330 L145 400" fill="none" stroke="#FF6B00" stroke-width="2" opacity="0.7"/>
+      <!-- Cross veins on chest -->
+      <path d="M70 300 L100 285 L130 300" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.6"/>
+      <path d="M75 340 L100 355 L125 340" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+      <!-- Shoulder veins -->
+      <path d="M28 220 L15 240 L10 265" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+      <path d="M172 220 L185 240 L190 265" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+    </g>
+    <!-- Helm glow aura -->
+    <ellipse cx="100" cy="190" rx="60" ry="40" fill="#FF6B00" opacity="0.04" filter="url(#bigGlow)"/>
+  </g>
+
+  <!-- Sentinel 5 (main right) -->
+  <g transform="translate(970, 0)" opacity="0.85">
+    <path d="M80 130 L50 162 L32 275 L36 400 L62 455 L98 455 L124 400 L128 275 L110 162Z" fill="url(#stone)"/>
+    <rect x="46" y="152" width="68" height="6" fill="#181818" rx="2"/>
+    <path d="M32 210 L16 228 L20 275 L32 275Z" fill="#1a1a1a"/>
+    <path d="M128 210 L144 228 L140 275 L128 275Z" fill="#1a1a1a"/>
+    <path d="M58 222 L68 214 L74 225 L64 231Z" fill="#FF6B00" filter="url(#softGlow)"/>
+    <path d="M100 222 L90 214 L84 225 L94 231Z" fill="#FF6B00" filter="url(#softGlow)"/>
+    <path d="M80 162 L78 210 L80 260 L76 330 L80 390" fill="none" stroke="#FF6B00" stroke-width="2" opacity="0.6"/>
+    <path d="M68 214 L55 260 L50 320 L55 380" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+    <path d="M90 214 L105 260 L110 320 L105 380" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+  </g>
+
+  <!-- Sentinel 6 -->
+  <g transform="translate(1180, 0)" opacity="0.65">
+    <path d="M60 170 L38 198 L25 295 L30 395 L50 440 L70 440 L90 395 L95 295 L82 198Z" fill="url(#stone)"/>
+    <path d="M45 248 L52 240 L58 248 L52 252Z" fill="#FF6B00" filter="url(#softGlow)" opacity="0.7"/>
+    <path d="M68 248 L75 240 L81 248 L75 252Z" fill="#FF6B00" filter="url(#softGlow)" opacity="0.7"/>
+    <path d="M55 265 L53 315 L57 365" fill="none" stroke="#FF6B00" stroke-width="1.5" opacity="0.5"/>
+  </g>
+
+  <!-- Sentinel 7 (far right) -->
+  <g transform="translate(1370, 0)" opacity="0.5">
+    <path d="M50 210 L35 228 L25 305 L30 385 L48 425 L62 425 L80 385 L85 305 L75 228Z" fill="url(#stone)"/>
+    <path d="M40 270 L44 265 L48 270 L44 273Z" fill="#FF6B00" filter="url(#softGlow)" opacity="0.5"/>
+    <path d="M60 270 L64 265 L68 270 L64 273Z" fill="#FF6B00" filter="url(#softGlow)" opacity="0.5"/>
+    <path d="M48 285 L46 330" fill="none" stroke="#FF6B00" stroke-width="1" opacity="0.35"/>
+  </g>
+
+  <!-- Atmospheric haze at bottom -->
+  <rect y="460" width="1536" height="52" fill="#0d0805" opacity="0.6"/>
+
+  <!-- Top vignette -->
+  <rect width="1536" height="120" fill="url(#sky)" opacity="0.5"/>
+</svg>
