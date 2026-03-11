@@ -1,16 +1,12 @@
 /**
- * useDeployCollection — 3-TX collection deployment flow.
+ * useDeployCollection — 3-4 TX collection deployment flow.
  *
- * TX1: Deploy WASM with NO calldata -> onDeployment() stores owner only.
- *      (OPNet node bug: deploy calldata is passed as 0 bytes)
- * TX2: Call collection.initialize(6 essential params) -> configures the collection
- *      and emits CollectionConfiguredEvent for indexer auto-discovery.
- * TX3: (optional) Call collection.changeMetadata(icon, banner, desc, website)
- *      -> sets branding. Separate TX to keep calldata small.
- *
- * The wallet produces funding + deploy TXs for TX1 (one wallet popup).
- * TX2 is a separate contract call (second wallet popup).
- * TX3 is another contract call (third wallet popup, only if branding provided).
+ * TX1: Deploy WASM (no calldata) -> onDeployment() stores owner.
+ * TX2: initialize(maxSupply, mintPrice, royaltyBps, royaltyRecipient) -> 4 numeric params only.
+ *      Calls instantiate() with placeholder name/symbol to avoid VM OOM.
+ * TX3: setCollectionInfo(name, symbol) -> writes real name/symbol.
+ *      Separate TX to avoid string parsing + instantiate() in one TX.
+ * TX4: (optional) changeMetadata(icon, banner, desc, website) -> branding.
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -47,9 +43,10 @@ export type DeployStatus =
     | 'idle'
     | 'deploying'      // TX1: wallet popup for deploy
     | 'waiting'         // Waiting for deploy TX to be mined
-    | 'initializing'    // TX2: wallet popup for initialize
+    | 'initializing'    // TX2: wallet popup for initialize (4 numeric params)
     | 'verifying'       // Polling isInitialized() to verify TX2 took effect
-    | 'branding'        // TX3: wallet popup for changeMetadata (optional)
+    | 'naming'          // TX3: wallet popup for setCollectionInfo (name, symbol)
+    | 'branding'        // TX4: wallet popup for changeMetadata (optional)
     | 'confirmed'       // All TXs done
     | 'error';
 
@@ -185,7 +182,7 @@ export function useDeployCollection(): UseDeployCollectionReturn {
     ): Promise<string | undefined> => {
         abortRef.current = false;
 
-        console.log('[FORGE] Starting 3-TX deployment flow:', params);
+        console.log('[FORGE] Starting 3-4 TX deployment flow:', params);
 
         if (!walletAddress || !walletAddr) {
             setError('Please connect your wallet first');
@@ -290,12 +287,12 @@ export function useDeployCollection(): UseDeployCollectionReturn {
             if (abortRef.current) return undefined;
 
             /* ========================================================== */
-            /*  TX2: Call initialize() — 6 essential params only           */
-            /*  Emits CollectionConfiguredEvent for indexer discovery      */
+            /*  TX2: initialize() — 4 numeric params only, NO strings     */
+            /*  Calls instantiate() with placeholder name/symbol ('_')    */
             /* ========================================================== */
 
             setStatus('initializing');
-            console.log('[FORGE] Initializing collection (TX2 — 6 params)...');
+            console.log('[FORGE] Initializing collection (TX2 — 4 numeric params)...');
 
             // Resolve royalty recipient to Address
             const royaltyHex = params.royaltyRecipient.startsWith('opt1')
@@ -311,26 +308,21 @@ export function useDeployCollection(): UseDeployCollectionReturn {
                 provider,
                 net,
             );
-
-            // Set sender for simulation — walletAddr is the Address object (has .toHex())
             collection.setSender(walletAddr);
 
-            // Simulate initialize() with 6 essential params only
+            // Simulate initialize() with 4 numeric params only — NO strings
             const callResult = await collection.initialize(
-                params.name,
-                params.symbol,
                 BigInt(params.supply),
                 params.mintPrice,
                 params.royaltyBps,
                 royaltyRecipient,
             );
 
-            // Check simulation for errors
             if ('error' in callResult && callResult.error) {
                 throw new Error(`Initialize simulation failed: ${String(callResult.error)}`);
             }
 
-            // Send the initialize TX — wallet handles signing (2nd wallet popup)
+            // Send initialize TX (2nd wallet popup)
             const initReceipt = await callResult.sendTransaction({
                 signer: signer ?? null,
                 mldsaSigner: null,
@@ -343,50 +335,81 @@ export function useDeployCollection(): UseDeployCollectionReturn {
             console.log(`[FORGE] Initialize TX broadcast: ${initTxId}`);
             setTxHash(initTxId);
 
-            // Check if the receipt indicates a revert
             if ('revert' in initReceipt && initReceipt.revert) {
                 throw new Error(`Initialize TX reverted: ${String(initReceipt.revert)}`);
             }
 
             if (abortRef.current) return undefined;
 
-            // Verify TX2 actually took effect — poll isInitialized()
-            // The TX may have been broadcast successfully but reverted on-chain.
+            // Verify TX2 — poll isInitialized() up to 30 min
             setStatus('verifying');
-            console.log('[FORGE] Verifying initialize() took effect...');
+            console.log('[FORGE] Verifying initialize() on-chain...');
             let initVerified = false;
             for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
                 if (abortRef.current) return undefined;
                 try {
                     const checkContract = getContract<ICollectionTemplateContract>(
-                        collectionAddrStr,
-                        COLLECTION_TEMPLATE_ABI,
-                        provider,
-                        net,
+                        collectionAddrStr, COLLECTION_TEMPLATE_ABI, provider, net,
                     );
                     checkContract.setSender(walletAddr);
                     const checkResult = await checkContract.isInitialized();
                     const isInit = checkResult?.properties?.initialized ?? false;
                     if (isInit) {
-                        console.log(`[FORGE] Collection initialized confirmed after ${attempt + 1} polls`);
+                        console.log(`[FORGE] Initialize confirmed after ${attempt + 1} polls`);
                         initVerified = true;
                         break;
                     }
-                } catch {
-                    // Contract might not be queryable yet — keep polling
-                }
+                } catch { /* keep polling */ }
                 await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
             }
 
             if (!initVerified) {
                 throw new Error(
-                    'Initialize TX was broadcast but the collection is not initialized on-chain after 30 minutes. ' +
-                    'The TX likely reverted or the network is extremely congested. Check the explorer for TX: ' + initTxId,
+                    'Initialize TX not confirmed on-chain after 30 minutes. ' +
+                    'Check the explorer for TX: ' + initTxId,
                 );
             }
 
+            if (abortRef.current) return undefined;
+
             /* ========================================================== */
-            /*  TX3: (Optional) Call changeMetadata() — branding           */
+            /*  TX3: setCollectionInfo(name, symbol) — strings only        */
+            /*  Separate from initialize() to avoid VM OOM                 */
+            /* ========================================================== */
+
+            setStatus('naming');
+            console.log('[FORGE] Setting collection name + symbol (TX3)...');
+
+            const collection2 = getContract<ICollectionTemplateContract>(
+                collectionAddrStr, COLLECTION_TEMPLATE_ABI, provider, net,
+            );
+            collection2.setSender(walletAddr);
+
+            const nameResult = await collection2.setCollectionInfo(
+                params.name,
+                params.symbol,
+            );
+
+            if ('error' in nameResult && nameResult.error) {
+                throw new Error(`setCollectionInfo simulation failed: ${String(nameResult.error)}`);
+            }
+
+            const nameReceipt = await nameResult.sendTransaction({
+                signer: signer ?? null,
+                mldsaSigner: null,
+                refundTo: walletAddress,
+                maximumAllowedSatToSpend: 500_000n,
+                network: walletNetwork,
+            });
+
+            const nameTxId = nameReceipt.transactionId;
+            console.log(`[FORGE] setCollectionInfo TX broadcast: ${nameTxId}`);
+            setTxHash(nameTxId);
+
+            if (abortRef.current) return undefined;
+
+            /* ========================================================== */
+            /*  TX4: (Optional) changeMetadata() — branding                */
             /*  Only if user provided icon/banner/description/website      */
             /* ========================================================== */
 
@@ -394,18 +417,14 @@ export function useDeployCollection(): UseDeployCollectionReturn {
 
             if (hasBranding) {
                 setStatus('branding');
-                console.log('[FORGE] Setting branding (TX3 — changeMetadata)...');
+                console.log('[FORGE] Setting branding (TX4 — changeMetadata)...');
 
-                // Need a fresh contract instance for the next call
-                const collection2 = getContract<ICollectionTemplateContract>(
-                    collectionAddrStr,
-                    COLLECTION_TEMPLATE_ABI,
-                    provider,
-                    net,
+                const collection3 = getContract<ICollectionTemplateContract>(
+                    collectionAddrStr, COLLECTION_TEMPLATE_ABI, provider, net,
                 );
-                collection2.setSender(walletAddr);
+                collection3.setSender(walletAddr);
 
-                const brandResult = await collection2.changeMetadata(
+                const brandResult = await collection3.changeMetadata(
                     params.icon || '',
                     params.banner || '',
                     params.description || '',
@@ -413,7 +432,6 @@ export function useDeployCollection(): UseDeployCollectionReturn {
                 );
 
                 if ('error' in brandResult && brandResult.error) {
-                    // Non-fatal: branding can be set later
                     console.warn(`[FORGE] Branding simulation failed (non-fatal): ${String(brandResult.error)}`);
                 } else {
                     const brandReceipt = await brandResult.sendTransaction({
@@ -435,7 +453,7 @@ export function useDeployCollection(): UseDeployCollectionReturn {
             /*  Kick off force-enrich so it shows on launchpad ASAP       */
             /* ========================================================== */
 
-            console.log(`[FORGE] Collection deployed + initialized at: ${collectionAddrStr}`);
+            console.log(`[FORGE] Collection deployed + initialized + named at: ${collectionAddrStr}`);
 
             // Fire-and-forget: tell backend to enrich metadata from chain now
             IndexerAPI.enrichCollection(collectionAddrStr, String(walletAddress)).catch((err) => {

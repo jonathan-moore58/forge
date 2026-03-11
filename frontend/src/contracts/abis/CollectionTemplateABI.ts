@@ -4,11 +4,11 @@ import { OP_721_ABI } from 'opnet';
 import type { Address } from '@btc-vision/transaction';
 
 /**
- * CollectionTemplate v12 ABI — Lightweight OP721 for FORGE.
+ * CollectionTemplate v13 ABI — Lightweight OP721 for FORGE.
  *
- * initialize() takes 6 essential params (2 strings only).
- * Branding is set via changeMetadata() (OP721 base, separate TX).
- * Base URI is set via setBaseURI() (OP721 base, separate TX).
+ * initialize() takes 4 numeric params ONLY (no strings) to avoid VM OOM.
+ * setCollectionInfo() sets name + symbol in a separate TX.
+ * Branding via changeMetadata() (OP721 base, separate TX).
  */
 const COLLECTION_TEMPLATE_CUSTOM: BitcoinInterfaceAbi = [
     // ============ Write methods ============
@@ -17,12 +17,21 @@ const COLLECTION_TEMPLATE_CUSTOM: BitcoinInterfaceAbi = [
         name: 'initialize',
         type: BitcoinAbiTypes.Function,
         inputs: [
-            { name: 'name', type: ABIDataTypes.STRING },
-            { name: 'symbol', type: ABIDataTypes.STRING },
             { name: 'maxSupply', type: ABIDataTypes.UINT256 },
             { name: 'mintPrice', type: ABIDataTypes.UINT256 },
             { name: 'royaltyBps', type: ABIDataTypes.UINT256 },
             { name: 'royaltyRecipient', type: ABIDataTypes.ADDRESS },
+        ],
+        outputs: [
+            { name: 'success', type: ABIDataTypes.BOOL },
+        ],
+    },
+    {
+        name: 'setCollectionInfo',
+        type: BitcoinAbiTypes.Function,
+        inputs: [
+            { name: 'name', type: ABIDataTypes.STRING },
+            { name: 'symbol', type: ABIDataTypes.STRING },
         ],
         outputs: [
             { name: 'success', type: ABIDataTypes.BOOL },
@@ -191,18 +200,23 @@ export const COLLECTION_TEMPLATE_ABI: BitcoinInterfaceAbi = [
 /**
  * ICollectionTemplateContract extends IOP721Contract with FORGE-specific methods.
  *
- * v12: initialize() takes 6 essential params only.
+ * v13: initialize() takes 4 numeric params only (no strings).
+ * setCollectionInfo() sets name + symbol in a separate TX.
  * Branding via changeMetadata(), base URI via setBaseURI() (both from OP721 base).
  */
 export interface ICollectionTemplateContract extends Omit<IOP721Contract, 'changeMetadata'> {
-    // Write methods — initialization (6 params, 2 strings only)
+    // Write methods — initialization (4 numeric params, NO strings)
     initialize(
-        name: string,
-        symbol: string,
         maxSupply: bigint,
         mintPrice: bigint,
         royaltyBps: bigint,
         royaltyRecipient: Address,
+    ): Promise<CallResult<{ success: boolean }>>;
+
+    // Write methods — set name + symbol (separate TX from initialize)
+    setCollectionInfo(
+        name: string,
+        symbol: string,
     ): Promise<CallResult<{ success: boolean }>>;
 
     // Write methods — minting

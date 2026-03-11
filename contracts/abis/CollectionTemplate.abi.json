@@ -7,14 +7,6 @@
             "onlyOwner": false,
             "inputs": [
                 {
-                    "name": "name",
-                    "type": "STRING"
-                },
-                {
-                    "name": "symbol",
-                    "type": "STRING"
-                },
-                {
                     "name": "maxSupply",
                     "type": "UINT256"
                 },
@@ -29,6 +21,28 @@
                 {
                     "name": "royaltyRecipient",
                     "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "setCollectionInfo",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "name",
+                    "type": "STRING"
+                },
+                {
+                    "name": "symbol",
+                    "type": "STRING"
                 }
             ],
             "outputs": [

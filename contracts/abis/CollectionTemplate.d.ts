@@ -30,6 +30,16 @@ export type Initialize = CallResult<
 >;
 
 /**
+ * @description Represents the result of the setCollectionInfo function call.
+ */
+export type SetCollectionInfo = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
  * @description Represents the result of the publicMint function call.
  */
 export type PublicMint = CallResult<
@@ -145,13 +155,12 @@ export type IsInitialized = CallResult<
 // ------------------------------------------------------------------
 export interface ICollectionTemplate extends IOP_NETContract {
     initialize(
-        name: string,
-        symbol: string,
         maxSupply: bigint,
         mintPrice: bigint,
         royaltyBps: bigint,
         royaltyRecipient: Address,
     ): Promise<Initialize>;
+    setCollectionInfo(name: string, symbol: string): Promise<SetCollectionInfo>;
     publicMint(quantity: bigint): Promise<PublicMint>;
     airdrop(recipient: Address, quantity: bigint): Promise<Airdrop>;
     setSalePhase(phase: bigint): Promise<SetSalePhase>;

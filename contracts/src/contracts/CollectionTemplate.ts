@@ -19,25 +19,16 @@ import { MintedEvent, PhaseChangedEvent, CollectionConfiguredEvent } from '../li
 import { MAX_ROYALTY_BPS } from '../lib/constants';
 
 /**
- * CollectionTemplate v12 — Lightweight OP721 for FORGE.
+ * CollectionTemplate v13 — Lightweight OP721 for FORGE.
  *
- * v12 changes (vs v11):
- *   - initialize() slimmed from 11 params to 6 (2 strings only)
- *   - Branding (icon, banner, description, website) set via changeMetadata()
- *     from OP721 base class as a separate TX to stay under VM memory limits
- *   - Base URI set via setBaseURI() from OP721 base class
- *   - Fixes "Revert error too long" caused by 7-string calldata in initialize()
+ * v13 changes (vs v12):
+ *   - initialize() takes 4 numeric params ONLY (no strings) to avoid OPNet
+ *     VM OOM / "Revert error too long" caused by runtime string parsing
+ *   - Calls instantiate() with placeholder name/symbol ('_')
+ *   - New setCollectionInfo(name, symbol) sets real name/symbol in separate TX
+ *   - Each TX does ONE kind of heavy operation to stay under VM memory
  *
- * Kept:
- *   - publicMint, airdrop — core minting
- *   - setSalePhase, setMintOpen — phase control
- *   - setMintPrice — price updates
- *   - initialize — essential config (6 params: name, symbol, maxSupply, mintPrice, royaltyBps, royaltyRecipient)
- *   - Essential views: collectionOwner, currentPrice, isMintOpen, salePhase, isInitialized, royaltyInfo
- *
- * Inherited from OP721 base (no code needed):
- *   - changeMetadata(icon, banner, description, website)
- *   - setBaseURI(baseURI)
+ * TX flow: deploy → initialize(4 numbers) → setCollectionInfo(2 strings) → optional changeMetadata(4 strings)
  *
  * Sale phases: INACTIVE(0) → PUBLIC(2) → ENDED(3)
  */
@@ -82,36 +73,24 @@ export class CollectionTemplate extends OP721 {
     }
 
     /**
-     * onDeployment — handles BOTH factory cloning and direct deployment.
-     *
-     * If calldata has data (factory cloning via deployContractFromExisting):
-     *   Reads 6 config params and fully initializes the collection.
-     *   This avoids a separate cross-contract call to initialize().
-     *
-     * If calldata is empty (direct WASM deployment):
-     *   Just stores the owner. User calls initialize() manually after.
+     * onDeployment — direct WASM deployment only.
+     * Stores the deployer as collection owner. All config set via
+     * initialize() + setCollectionInfo() in separate TXs.
      */
-    public override onDeployment(calldata: Calldata): void {
+    public override onDeployment(_calldata: Calldata): void {
         this._collectionOwner.value = Blockchain.tx.sender;
-
-        // If calldata has data, initialize inline (factory cloning path)
-        if (calldata.byteLength > 0) {
-            this.initializeFromCalldata(calldata);
-        }
     }
 
     /**
-     * Initialize — essential config only (6 params, 2 strings).
+     * Initialize — numeric config only (4 params, NO strings).
      *
-     * Branding (icon, banner, description, website) is set via a separate
-     * changeMetadata() call (inherited from OP721 base) to keep calldata
-     * small and avoid OPNet VM memory limits.
+     * Strings are set separately via setCollectionInfo() to avoid
+     * OPNet VM OOM from runtime string parsing + instantiate() in one TX.
      *
-     * Base URI is set via setBaseURI() (inherited from OP721 base) when ready.
+     * Calls instantiate() with placeholder name/symbol ('_') so the
+     * OP721 base class is happy. Real name/symbol set via setCollectionInfo().
      */
     @method(
-        { name: 'name', type: ABIDataTypes.STRING },
-        { name: 'symbol', type: ABIDataTypes.STRING },
         { name: 'maxSupply', type: ABIDataTypes.UINT256 },
         { name: 'mintPrice', type: ABIDataTypes.UINT256 },
         { name: 'royaltyBps', type: ABIDataTypes.UINT256 },
@@ -120,10 +99,42 @@ export class CollectionTemplate extends OP721 {
     @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public initialize(calldata: Calldata): BytesWriter {
         if (this._configured.value) {
-            throw new Revert('Already initialized');
+            throw new Revert('Already init');
         }
         this.onlyCollectionOwner();
         this.initializeFromCalldata(calldata);
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    /**
+     * Set collection name and symbol. Owner only.
+     * Writes directly to OP721 base class _name and _symbol storage.
+     * Separate TX from initialize() to avoid string parsing + instantiate() in same TX.
+     */
+    @method(
+        { name: 'name', type: ABIDataTypes.STRING },
+        { name: 'symbol', type: ABIDataTypes.STRING },
+    )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    public setCollectionInfo(calldata: Calldata): BytesWriter {
+        this.onlyCollectionOwner();
+
+        const name: string = calldata.readStringWithLength();
+        const symbol: string = calldata.readStringWithLength();
+
+        if (name.length == 0) {
+            throw new Revert('Empty name');
+        }
+        if (symbol.length == 0) {
+            throw new Revert('Empty symbol');
+        }
+
+        // Write directly to OP721 protected storage fields
+        this._name.value = name;
+        this._symbol.value = symbol;
 
         const writer: BytesWriter = new BytesWriter(1);
         writer.writeBoolean(true);
@@ -300,35 +311,27 @@ export class CollectionTemplate extends OP721 {
     /* ================================================================== */
 
     /**
-     * Shared initialization logic — reads 6 essential params from calldata.
-     * Used by both onDeployment (factory path) and initialize (manual path).
-     *
-     * Branding + base URI are set separately via changeMetadata() and
-     * setBaseURI() (both inherited from OP721 base) to keep this TX light.
+     * Reads 4 numeric params from calldata and calls instantiate().
+     * NO string reads — strings are set via setCollectionInfo() in a separate TX.
+     * Placeholder '_' used for name/symbol to satisfy OP721 instantiate() validation.
      */
     private initializeFromCalldata(calldata: Calldata): void {
-        const name: string = calldata.readStringWithLength();
-        const symbol: string = calldata.readStringWithLength();
         const maxSupply: u256 = calldata.readU256();
         const mintPrice: u256 = calldata.readU256();
         const royaltyBps: u256 = calldata.readU256();
         const royaltyRecipient: Address = calldata.readAddress();
 
         if (maxSupply.isZero()) {
-            throw new Revert('Supply must be > 0');
+            throw new Revert('Supply=0');
         }
         if (royaltyBps > MAX_ROYALTY_BPS) {
-            throw new Revert('Royalty exceeds 10%');
+            throw new Revert('Royalty>10%');
         }
 
-        // skipDeployerVerification = true because:
-        //   - onDeployment path: deployer IS tx.sender (just set _collectionOwner)
-        //   - initialize path: onlyCollectionOwner() already verified
-        // Also avoids OP_NET.onlyDeployer() using !== (reference comparison)
-        // which fails even when addresses match (different object refs).
-        // Pass empty strings for branding — set via changeMetadata() later.
+        // skipDeployerVerification = true: onlyCollectionOwner() already verified.
+        // Placeholder '_' for name/symbol — real values set via setCollectionInfo().
         this.instantiate(new OP721InitParameters(
-            name, symbol, '', maxSupply,
+            '_', '_', '', maxSupply,
             '', '', '', '',
         ), true);
 
@@ -337,8 +340,6 @@ export class CollectionTemplate extends OP721 {
         this._royaltyRecipient.value = royaltyRecipient;
         this._configured.value = true;
 
-        // On-chain proof: indexer auto-discovers collections from this event.
-        // If DB is wiped, re-scanning blocks rediscovers all collections.
         this.emitEvent(new CollectionConfiguredEvent(
             Blockchain.contract.address,
             this._collectionOwner.value,
@@ -410,6 +411,6 @@ export class CollectionTemplate extends OP721 {
             if (match) return;
         }
 
-        throw new Revert('Insufficient BTC payment to contract');
+        throw new Revert('No payment');
     }
 }

@@ -23,12 +23,19 @@ export const CollectionTemplateAbi = [
     {
         name: 'initialize',
         inputs: [
-            { name: 'name', type: ABIDataTypes.STRING },
-            { name: 'symbol', type: ABIDataTypes.STRING },
             { name: 'maxSupply', type: ABIDataTypes.UINT256 },
             { name: 'mintPrice', type: ABIDataTypes.UINT256 },
             { name: 'royaltyBps', type: ABIDataTypes.UINT256 },
             { name: 'royaltyRecipient', type: ABIDataTypes.ADDRESS },
+        ],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setCollectionInfo',
+        inputs: [
+            { name: 'name', type: ABIDataTypes.STRING },
+            { name: 'symbol', type: ABIDataTypes.STRING },
         ],
         outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
         type: BitcoinAbiTypes.Function,
