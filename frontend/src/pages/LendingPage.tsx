@@ -929,22 +929,19 @@ export function LendingPage(): JSX.Element {
                                             </div>
                                             <div>
                                                 <label style={labelStyle}>Payment Token</label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <select
-                                                        value={form.paymentToken}
-                                                        onChange={(e) => updateField('paymentToken', e.target.value)}
-                                                        style={selectStyle}
-                                                    >
-                                                        {PAYMENT_TOKEN_NAMES.map((token) => (
-                                                            <option key={token} value={token}>{token}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div style={{
-                                                        position: 'absolute', right: '16px', top: '50%',
-                                                        transform: 'translateY(-50%)', pointerEvents: 'none',
-                                                        color: theme.colors.text.tertiary, fontSize: '10px',
-                                                    }}>&#9660;</div>
-                                                </div>
+                                                <input
+                                                    type="text"
+                                                    list="payment-token-suggestions"
+                                                    placeholder="MOTO, PILL, or paste address (opt1...)"
+                                                    value={form.paymentToken}
+                                                    onChange={(e) => updateField('paymentToken', e.target.value)}
+                                                    style={inputStyle}
+                                                />
+                                                <datalist id="payment-token-suggestions">
+                                                    {PAYMENT_TOKEN_NAMES.map((token) => (
+                                                        <option key={token} value={token} />
+                                                    ))}
+                                                </datalist>
                                             </div>
                                         </div>
 
