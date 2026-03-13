@@ -6,7 +6,7 @@ dist/
 build/
 *.wasm
 
-# Environment & secrets — NEVER commit these
+# Environment & secrets
 .env
 .env.*
 .env.local
@@ -18,15 +18,20 @@ build/
 *.db-shm
 *.db-wal
 
-# Claude Code local artifacts
-.claude/settings.local.json
-.claude/loop/
-.claude/worktrees/
+# Claude Code / AI dev artifacts
+.claude/
+CLAUDE.md
+NEW_SESSION_PROMPT.md
+
+# Internal dev assets (not part of the product)
+opnet-claude-pack/
+tmoto-assets/
+scripts/
 
 # Windows artifacts
 nul
 
-# Debug/test scripts (may contain RPC URLs or addresses)
+# Debug / test scripts
 backend/test-*.mjs
 backend/test-*.ts
 frontend/test-*.mjs
@@ -39,3 +44,5 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
