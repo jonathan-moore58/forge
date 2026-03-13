@@ -1,0 +1,16 @@
+{
+  "name": "FORGE — Bitcoin NFT Launchpad",
+  "short_name": "FORGE",
+  "description": "The most advanced NFT Launchpad and Marketplace on Bitcoin L1",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e0e16",
+  "theme_color": "#ff6b00",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ]
+}
