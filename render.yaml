@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: forge-indexer
+    runtime: node
+    region: ohio
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NETWORK
+        value: testnet
+      - key: RPC_URL
+        value: https://testnet.opnet.org/api/v1/json-rpc
+      - key: DB_PATH
+        value: ./forge-indexer.db
+      - key: START_BLOCK
+        value: "0"
+      - key: POLL_INTERVAL_MS
+        value: "30000"
+      - key: FACTORY_ADDRESS
+        value: opt1sqqewmpmd2vwg67fflwdmu202nwhajrqw2yd9esez
+      - key: MARKETPLACE_ADDRESS
+        value: opt1sqpj37ym9rx7ud0spwgpf68mwpmxs8dpgxu204jek
+      - key: AUCTION_HOUSE_ADDRESS
+        value: opt1sqqvah7sfn8snf7cj0rypzgxnwxklt6dv3sdghxff
+      - key: STAKING_ADDRESS
+        value: opt1sqzqqmlxlq5tmmrs933905dxuu93l604s2skqgq6d
+      - key: LENDING_ADDRESS
+        value: opt1sqpvakn6n4s3y3ejx3sjpudxu39jgngw6pslu7f3x
+      - key: CORS_ORIGINS
+        value: https://forgeedge.vercel.app,https://forge-murex-eight.vercel.app,http://localhost:5173,http://localhost:5192

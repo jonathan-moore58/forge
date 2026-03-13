@@ -272,9 +272,13 @@ The frontend deploys automatically on push via Vercel:
 - **Build Command**: `npm run build`
 - **Output**: `dist/`
 
-### Backend
+### Backend (Render — Free)
 
-The backend indexer runs as a long-lived Node.js process. Deploy to any VPS, Railway, Render, or similar:
+One-click deploy the indexer to Render:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jonathan-moore58/forge)
+
+Or deploy manually to any VPS, Railway, or similar:
 
 ```bash
 cd backend
