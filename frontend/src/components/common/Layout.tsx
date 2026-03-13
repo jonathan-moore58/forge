@@ -234,28 +234,53 @@ export function Layout({ children }: { children: ReactNode }): JSX.Element {
                     gap: isMobile ? '12px' : '32px',
                 }}>
                     {/* Logo */}
-                    <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '12px', flexShrink: 0 }}>
                         <div style={{
-                            width: isMobile ? '30px' : '34px',
-                            height: isMobile ? '30px' : '34px',
-                            borderRadius: theme.radii.md,
-                            background: theme.colors.brand.orange,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontFamily: theme.fonts.heading,
-                            fontWeight: 700,
-                            fontSize: isMobile ? '15px' : '17px',
-                            color: '#fff',
-                            boxShadow: '0 0 12px rgba(255, 107, 0, 0.3)',
-                        }}>F</div>
-                        <span style={{
-                            fontFamily: theme.fonts.heading,
-                            fontWeight: 700,
-                            fontSize: isMobile ? '18px' : '21px',
-                            letterSpacing: theme.letterSpacing.tight,
-                            color: theme.colors.text.primary,
-                        }}>FORGE</span>
+                            width: isMobile ? '32px' : '36px',
+                            height: isMobile ? '32px' : '36px',
+                            borderRadius: '10px',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                            boxShadow: '0 0 16px rgba(255, 107, 0, 0.2), 0 2px 8px rgba(0,0,0,0.3)',
+                        }}>
+                            <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', display: 'block' }}>
+                                <defs><clipPath id="nav-c"><rect width="512" height="512" rx="96"/></clipPath></defs>
+                                <g clipPath="url(#nav-c)">
+                                    <rect width="512" height="512" fill="#0e0e16"/>
+                                    <g fill="#ff6b00">
+                                        <rect x="72" y="92" width="36" height="152" rx="5"/><rect x="72" y="92" width="112" height="36" rx="5"/><rect x="72" y="156" width="80" height="28" rx="5"/>
+                                        <rect x="200" y="92" width="36" height="152" rx="5"/><rect x="276" y="92" width="36" height="152" rx="5"/><rect x="200" y="92" width="112" height="36" rx="5"/><rect x="200" y="208" width="112" height="36" rx="5"/>
+                                        <rect x="328" y="92" width="36" height="152" rx="5"/><rect x="328" y="92" width="112" height="36" rx="5"/><rect x="404" y="92" width="36" height="88" rx="5"/><rect x="328" y="152" width="112" height="28" rx="5"/><polygon points="376,180 412,180 440,244 404,244"/>
+                                        <rect x="72" y="272" width="36" height="152" rx="5"/><rect x="72" y="272" width="112" height="36" rx="5"/><rect x="72" y="388" width="112" height="36" rx="5"/><rect x="148" y="348" width="36" height="76" rx="5"/><rect x="110" y="348" width="74" height="28" rx="5"/>
+                                        <rect x="200" y="272" width="36" height="152" rx="5"/><rect x="200" y="272" width="112" height="36" rx="5"/><rect x="200" y="336" width="80" height="28" rx="5"/><rect x="200" y="388" width="112" height="36" rx="5"/>
+                                    </g>
+                                </g>
+                            </svg>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+                            <span style={{
+                                fontFamily: theme.fonts.heading,
+                                fontWeight: 800,
+                                fontSize: isMobile ? '18px' : '20px',
+                                letterSpacing: '0.06em',
+                                background: 'linear-gradient(135deg, #ff8c3a 0%, #ff6b00 50%, #e85500 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                lineHeight: 1.1,
+                            }}>FORGE</span>
+                            {!isMobile && (
+                                <span style={{
+                                    fontSize: '9px',
+                                    fontWeight: 500,
+                                    letterSpacing: '0.12em',
+                                    color: theme.colors.text.tertiary,
+                                    textTransform: 'uppercase',
+                                    lineHeight: 1,
+                                    marginTop: '2px',
+                                }}>Bitcoin NFT</span>
+                            )}
+                        </div>
                     </Link>
 
                     {/* Desktop Nav with sliding indicator */}
@@ -628,21 +653,33 @@ export function Layout({ children }: { children: ReactNode }): JSX.Element {
                             <div style={{
                                 width: '28px',
                                 height: '28px',
-                                borderRadius: theme.radii.sm,
-                                background: theme.colors.brand.orange,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontFamily: theme.fonts.heading,
-                                fontWeight: 700,
-                                fontSize: '14px',
-                                color: '#fff',
-                            }}>F</div>
+                                borderRadius: '7px',
+                                overflow: 'hidden',
+                                flexShrink: 0,
+                            }}>
+                                <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', display: 'block' }}>
+                                    <defs><clipPath id="foot-c"><rect width="512" height="512" rx="96"/></clipPath></defs>
+                                    <g clipPath="url(#foot-c)">
+                                        <rect width="512" height="512" fill="#0e0e16"/>
+                                        <g fill="#ff6b00">
+                                            <rect x="72" y="92" width="36" height="152" rx="5"/><rect x="72" y="92" width="112" height="36" rx="5"/><rect x="72" y="156" width="80" height="28" rx="5"/>
+                                            <rect x="200" y="92" width="36" height="152" rx="5"/><rect x="276" y="92" width="36" height="152" rx="5"/><rect x="200" y="92" width="112" height="36" rx="5"/><rect x="200" y="208" width="112" height="36" rx="5"/>
+                                            <rect x="328" y="92" width="36" height="152" rx="5"/><rect x="328" y="92" width="112" height="36" rx="5"/><rect x="404" y="92" width="36" height="88" rx="5"/><rect x="328" y="152" width="112" height="28" rx="5"/><polygon points="376,180 412,180 440,244 404,244"/>
+                                            <rect x="72" y="272" width="36" height="152" rx="5"/><rect x="72" y="272" width="112" height="36" rx="5"/><rect x="72" y="388" width="112" height="36" rx="5"/><rect x="148" y="348" width="36" height="76" rx="5"/><rect x="110" y="348" width="74" height="28" rx="5"/>
+                                            <rect x="200" y="272" width="36" height="152" rx="5"/><rect x="200" y="272" width="112" height="36" rx="5"/><rect x="200" y="336" width="80" height="28" rx="5"/><rect x="200" y="388" width="112" height="36" rx="5"/>
+                                        </g>
+                                    </g>
+                                </svg>
+                            </div>
                             <span style={{
                                 fontFamily: theme.fonts.heading,
-                                fontWeight: 700,
+                                fontWeight: 800,
                                 fontSize: '18px',
-                                color: theme.colors.text.primary,
+                                letterSpacing: '0.06em',
+                                background: 'linear-gradient(135deg, #ff8c3a 0%, #ff6b00 50%, #e85500 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
                             }}>FORGE</span>
                         </div>
                         <p style={{ fontSize: '13px', color: theme.colors.text.tertiary, lineHeight: 1.7, maxWidth: '320px' }}>
