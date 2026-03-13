@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../../db/connection.js';
 import { parsePagination } from '../../types/api.js';
+import { addressToRawHex } from '../../utils/address.js';
 
 export function activityRoutes(): Router {
     const router = Router();
@@ -24,7 +25,8 @@ export function activityRoutes(): Router {
         }
         if (req.query.address) {
             conditions.push('(from_address = @address OR to_address = @address)');
-            params.address = req.query.address as string;
+            // Convert bech32m → hex to match DB format
+            params.address = addressToRawHex(req.query.address as string);
         }
         if (req.query.type) {
             conditions.push('event_type = @eventType');

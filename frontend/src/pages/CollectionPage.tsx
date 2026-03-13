@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import CountUp from 'react-countup';
 import { useWalletConnect } from '@btc-vision/walletconnect';
+import { bech32m } from 'bech32';
 import { theme } from '@/styles/theme';
 import { GlassCard } from '@/components/common/GlassCard';
 import { Button } from '@/components/common/Button';
@@ -17,6 +18,7 @@ import { useMarketplaceActions } from '@/hooks/useMarketplaceActions';
 import { useCollectionActions } from '@/hooks/useCollectionActions';
 import { IndexerAPI, type IndexerListing, type IndexerActivity, type IndexerOffer } from '@/services/IndexerAPI';
 import { useCollectionStats } from '@/hooks/useMarketplace';
+import { useTotalSupply } from '@/hooks/useCollectionData';
 import { truncateAddress } from '@/utils/format';
 
 /* ------------------------------------------------------------------ */
@@ -433,14 +435,154 @@ function EditBrandingModal({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Set Base URI Modal                                                 */
+/* ------------------------------------------------------------------ */
+
+function SetBaseURIModal({
+    open,
+    onClose,
+    currentBaseUri,
+    onSave,
+    saving,
+}: {
+    readonly open: boolean;
+    readonly onClose: () => void;
+    readonly currentBaseUri: string;
+    readonly onSave: (baseUri: string) => void;
+    readonly saving: boolean;
+}): JSX.Element | null {
+    const [baseUri, setBaseUri] = useState(currentBaseUri);
+
+    if (!open) return null;
+
+    const inputStyle: React.CSSProperties = {
+        width: '100%',
+        padding: '10px 14px',
+        background: theme.colors.bg.interactive,
+        border: `1px solid ${theme.colors.border.subtle}`,
+        borderRadius: theme.radii.md,
+        color: theme.colors.text.primary,
+        fontSize: '13px',
+        fontFamily: theme.fonts.mono,
+        outline: 'none',
+        boxSizing: 'border-box',
+    };
+
+    const labelStyle: React.CSSProperties = {
+        fontSize: '12px',
+        fontWeight: 600,
+        color: theme.colors.text.secondary,
+        marginBottom: '6px',
+        display: 'block',
+        letterSpacing: theme.letterSpacing.wider,
+        textTransform: 'uppercase',
+    };
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 1000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(6px)',
+            }}
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    background: theme.colors.bg.card,
+                    border: `1px solid ${theme.colors.border.subtle}`,
+                    borderRadius: theme.radii.xl,
+                    padding: '28px',
+                    width: '480px',
+                    maxWidth: '95vw',
+                    maxHeight: '90vh',
+                    overflow: 'auto',
+                    boxShadow: '0 24px 48px rgba(0,0,0,0.4)',
+                }}
+            >
+                <div style={{ marginBottom: '20px' }}>
+                    <h3 style={{
+                        fontFamily: theme.fonts.heading,
+                        fontSize: theme.fontSize.xl,
+                        fontWeight: 700,
+                        marginBottom: '4px',
+                    }}>
+                        Set Base URI
+                    </h3>
+                    <p style={{
+                        fontSize: '13px',
+                        color: theme.colors.text.tertiary,
+                        margin: 0,
+                        lineHeight: 1.5,
+                    }}>
+                        Set the base URI for token metadata. Each token&apos;s metadata will be fetched
+                        from <code style={{ color: theme.colors.brand.orange, fontSize: '12px' }}>baseURI + tokenId + &quot;.json&quot;</code>.
+                    </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                        <label style={labelStyle}>Base URI</label>
+                        <input
+                            style={inputStyle}
+                            value={baseUri}
+                            onChange={(e) => setBaseUri(e.target.value)}
+                            placeholder="ipfs://QmXyz.../ or https://api.example.com/metadata/"
+                        />
+                        <p style={{
+                            fontSize: '11px',
+                            color: theme.colors.text.tertiary,
+                            margin: '6px 0 0',
+                            lineHeight: 1.4,
+                        }}>
+                            Must end with &quot;/&quot; so token URIs resolve correctly.
+                            Example: <code style={{ fontSize: '11px' }}>ipfs://QmXyz.../</code>
+                        </p>
+                    </div>
+                </div>
+
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: theme.spacing.sm,
+                    marginTop: '24px',
+                }}>
+                    <Button variant="secondary" size="sm" onClick={onClose} disabled={saving}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => onSave(baseUri.trim())}
+                        disabled={!baseUri.trim() || saving}
+                    >
+                        {saving ? 'Saving...' : 'Set On-Chain'}
+                    </Button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Page Component                                                     */
 /* ------------------------------------------------------------------ */
 
 export function CollectionPage(): JSX.Element {
     const { address } = useParams<{ address: string }>();
     const { network } = useNetwork();
-    const { address: walletAddr } = useWalletConnect();
-    const walletAddress = walletAddr?.toString().toLowerCase() ?? '';
+    const { walletAddress: rawWalletAddress, address: walletAddrObj } = useWalletConnect();
+    const walletAddress = rawWalletAddress ? (typeof rawWalletAddress === 'string' ? rawWalletAddress : String(rawWalletAddress)).toLowerCase() : '';
 
     /* ---- Indexer data ---- */
     const { data: indexerCollection, isLoading } = useQuery({
@@ -531,10 +673,17 @@ export function CollectionPage(): JSX.Element {
     /* ---- Edit branding modal state ---- */
     const [brandingModalOpen, setBrandingModalOpen] = useState(false);
 
+    /* ---- Set base URI modal state ---- */
+    const [baseUriModalOpen, setBaseUriModalOpen] = useState(false);
+
+    /* ---- On-chain totalSupply for real-time mint count ---- */
+    const { data: onChainSupply } = useTotalSupply(network, address);
+
     /* ---- Computed values ---- */
     const col = indexerCollection?.data ?? null;
     const cName = col?.name ?? (isLoading ? 'Loading...' : 'Unknown Collection');
-    const cSupply = col?.total_supply ?? 0;
+    // Prefer on-chain totalSupply (real-time) over indexer (delayed)
+    const cSupply = onChainSupply !== undefined ? Number(onChainSupply) : (col?.total_supply ?? 0);
     const cMaxSupply = col?.max_supply ?? 0;
     const cFloorPrice = collStats ? Number(collStats.floorPrice) / 1e8 : 0;
     const cTotalVolume = collStats ? Number(collStats.volume) / 1e8 : 0;
@@ -546,13 +695,39 @@ export function CollectionPage(): JSX.Element {
     const cBanner = col?.banner ?? '';
     const cDescription = col?.description ?? '';
     const cWebsite = col?.website ?? '';
-    const isCreator = walletAddress && col?.creator ? col.creator.toLowerCase() === walletAddress : false;
+    // Multi-strategy owner check — wallet may return hex or bech32m, DB stores bech32m
+    const isCreator = useMemo(() => {
+        if (!col?.creator) return false;
+        const creatorLower = col.creator.toLowerCase();
+
+        // Strategy 1: Direct string comparison (walletAddress is the string the wallet gives us)
+        if (walletAddress && walletAddress === creatorLower) return true;
+
+        // Strategy 2: Hex comparison (wallet Address object hex vs bech32m-decoded creator)
+        if (walletAddrObj) {
+            const walletHex = String(walletAddrObj).replace(/^0x/i, '').toLowerCase();
+            let creatorHex = '';
+            try {
+                const decoded = bech32m.decode(col.creator, col.creator.length);
+                const rawBytes = bech32m.fromWords(decoded.words.slice(1));
+                creatorHex = Array.from(rawBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch {
+                creatorHex = creatorLower;
+            }
+            if (walletHex === creatorHex) return true;
+            // Suffix match — wallet is 32-byte (64 hex), creator might be 21-byte (42 hex)
+            if (walletHex.length === 64 && creatorHex.length === 42 && walletHex.endsWith(creatorHex)) return true;
+            if (creatorHex.length === 64 && walletHex.length === 42 && creatorHex.endsWith(walletHex)) return true;
+        }
+
+        return false;
+    }, [col?.creator, walletAddress, walletAddrObj]);
     const salePhase = col?.sale_phase ?? 0;
     const phaseLabel = salePhase === 2 ? 'Public' : salePhase === 1 ? 'Whitelist' : salePhase === 3 ? 'Ended' : 'Inactive';
 
     const [activeTab, setActiveTab] = useState<TabId>('items');
     const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'token-id'>('token-id');
-    const [itemsFilter, setItemsFilter] = useState<'all' | 'listed'>('all');
+    const [itemsFilter, setItemsFilter] = useState<'all' | 'listed'>('listed');
 
     // Build listing map: tokenId → IndexerListing
     const listingMap = useMemo(() => {
@@ -640,37 +815,39 @@ export function CollectionPage(): JSX.Element {
 
     return (
         <div>
-            {/* Banner — blurred collection image background */}
-            <div style={{
-                height: '320px',
-                background: DEFAULT_BANNER_GRADIENT,
-                position: 'relative',
-                overflow: 'hidden',
-            }}>
-                {/* Collection banner → icon → token #1 as blurred banner background */}
-                {(cBanner || cIcon || cBaseUri) && (
-                    <CollectionImage
-                        uri={cBanner || cIcon}
-                        baseUri={cBaseUri}
-                        index={0}
-                        aspectRatio="auto"
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            position: 'absolute',
-                            inset: 0,
-                            filter: 'blur(30px) brightness(0.5) saturate(1.3)',
-                            transform: 'scale(1.15)',
-                        }}
-                    />
-                )}
+            {/* Banner + Avatar wrapper */}
+            <div style={{ position: 'relative' }}>
+                {/* Banner — blurred collection image background */}
                 <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(to bottom, transparent 40%, rgba(10,10,15,0.9) 100%)',
-                    zIndex: 1,
-                }} />
-                {/* Collection avatar — icon → token #1 */}
+                    height: '320px',
+                    background: DEFAULT_BANNER_GRADIENT,
+                    position: 'relative',
+                    overflow: 'hidden',
+                }}>
+                    {/* Collection banner → icon → token #1 as blurred banner background */}
+                    {(cBanner || cIcon || cBaseUri) && (
+                        <CollectionImage
+                            uri={cBanner || cIcon}
+                            baseUri={cBaseUri}
+                            index={0}
+                            aspectRatio="auto"
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                position: 'absolute',
+                                inset: 0,
+                                objectFit: 'cover',
+                            }}
+                        />
+                    )}
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(to bottom, transparent 60%, rgba(10,10,15,0.7) 100%)',
+                        zIndex: 1,
+                    }} />
+                </div>
+                {/* Collection avatar — icon → token #1 (outside overflow:hidden) */}
                 <div style={{
                     position: 'absolute',
                     bottom: '-40px',
@@ -764,9 +941,14 @@ export function CollectionPage(): JSX.Element {
                         </div>
                         <div style={{ display: 'flex', gap: theme.spacing.sm }}>
                             {isCreator && (
-                                <Button variant="secondary" size="sm" onClick={() => setBrandingModalOpen(true)}>
-                                    Edit Branding
-                                </Button>
+                                <>
+                                    <Button variant="secondary" size="sm" onClick={() => setBrandingModalOpen(true)}>
+                                        Edit Branding
+                                    </Button>
+                                    <Button variant="secondary" size="sm" onClick={() => setBaseUriModalOpen(true)}>
+                                        {cBaseUri ? 'Update Base URI' : 'Set Base URI'}
+                                    </Button>
+                                </>
                             )}
                             <Button variant="secondary" size="sm">Share</Button>
                         </div>
@@ -1516,6 +1698,29 @@ export function CollectionPage(): JSX.Element {
                 onSave={async (icon, banner, description, website) => {
                     await collectionActions.changeMetadata(icon, banner, description, website);
                     setBrandingModalOpen(false);
+                    // Force-enrich so backend picks up the new branding immediately
+                    if (address) {
+                        try { await IndexerAPI.enrichCollection(address, col?.creator); } catch { /* non-critical */ }
+                        queryClient.invalidateQueries({ queryKey: ['collection', 'indexer', address] });
+                    }
+                }}
+            />
+
+            {/* Set Base URI Modal (creator only) */}
+            <SetBaseURIModal
+                open={baseUriModalOpen}
+                onClose={() => setBaseUriModalOpen(false)}
+                currentBaseUri={cBaseUri}
+                saving={collectionActions.isPending}
+                onSave={async (baseUri) => {
+                    await collectionActions.setBaseUri(baseUri);
+                    setBaseUriModalOpen(false);
+                    // Force-enrich so backend picks up the new base URI via tokenURI(1) immediately
+                    if (address) {
+                        try { await IndexerAPI.enrichCollection(address, col?.creator); } catch { /* non-critical */ }
+                        queryClient.invalidateQueries({ queryKey: ['collection', 'indexer', address] });
+                        queryClient.invalidateQueries({ queryKey: ['collection', 'tokens', address] });
+                    }
                 }}
             />
         </div>

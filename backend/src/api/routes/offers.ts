@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../../db/connection.js';
 import { parsePagination } from '../../types/api.js';
+import { addressToRawHex } from '../../utils/address.js';
 
 export function offerRoutes(): Router {
     const router = Router();
@@ -21,7 +22,8 @@ export function offerRoutes(): Router {
         }
         if (req.query.offerer) {
             conditions.push('offerer = @offerer');
-            params.offerer = req.query.offerer as string;
+            // Convert bech32m → hex to match DB format
+            params.offerer = addressToRawHex(req.query.offerer as string);
         }
         if (req.query.collection) {
             conditions.push('collection_address = @collection');

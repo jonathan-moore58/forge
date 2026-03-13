@@ -8,6 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { IndexerAPI, type IndexerLoan } from '@/services/IndexerAPI';
 import { type ForgeNetwork } from '@/config/contracts';
+import { resolveAddressToHex } from '@/utils/address';
 
 /* ------------------------------------------------------------------ */
 /*  Query key factory                                                  */
@@ -18,6 +19,7 @@ export const lendingKeys = {
     stats: (network: ForgeNetwork) => [...lendingKeys.all(network), 'stats'] as const,
     loans: (network: ForgeNetwork) => [...lendingKeys.all(network), 'loans'] as const,
     pendingLoans: (network: ForgeNetwork) => [...lendingKeys.all(network), 'loans', 'pending'] as const,
+    myPending: (network: ForgeNetwork, addr: string) => [...lendingKeys.all(network), 'loans', 'myPending', addr] as const,
     myBorrowed: (network: ForgeNetwork, addr: string) => [...lendingKeys.all(network), 'loans', 'borrowed', addr] as const,
     myFunded: (network: ForgeNetwork, addr: string) => [...lendingKeys.all(network), 'loans', 'funded', addr] as const,
     loan: (network: ForgeNetwork, id: number) => [...lendingKeys.all(network), 'loan', id] as const,
@@ -101,13 +103,34 @@ export function usePendingLoans(network: ForgeNetwork) {
 }
 
 /**
+ * Get the user's own pending loan requests (status=0, borrower=walletAddr).
+ *
+ * IMPORTANT: The backend stores wallet addresses as their 32-byte OPNet identity
+ * hex (from contract events). The bech32m P2TR x-only pubkey is NOT the same value.
+ * We resolve the wallet address to hex via getPublicKeyInfo RPC before querying.
+ */
+export function useMyPendingLoans(network: ForgeNetwork, walletAddr: string | undefined) {
+    return useQuery({
+        queryKey: lendingKeys.myPending(network, walletAddr ?? ''),
+        queryFn: async (): Promise<LoanItem[]> => {
+            const hex = await resolveAddressToHex(walletAddr!, network);
+            const res = await IndexerAPI.loans({ borrower: hex, status: 0 });
+            return res.data.map(mapLoan);
+        },
+        enabled: !!walletAddr,
+        staleTime: 30_000,
+    });
+}
+
+/**
  * Get loans where the user is the borrower (active loans).
  */
 export function useMyBorrowedLoans(network: ForgeNetwork, walletAddr: string | undefined) {
     return useQuery({
         queryKey: lendingKeys.myBorrowed(network, walletAddr ?? ''),
         queryFn: async (): Promise<LoanItem[]> => {
-            const res = await IndexerAPI.loans({ borrower: walletAddr!, status: 1 });
+            const hex = await resolveAddressToHex(walletAddr!, network);
+            const res = await IndexerAPI.loans({ borrower: hex, status: 1 });
             return res.data.map(mapLoan);
         },
         enabled: !!walletAddr,
@@ -122,7 +145,8 @@ export function useMyFundedLoans(network: ForgeNetwork, walletAddr: string | und
     return useQuery({
         queryKey: lendingKeys.myFunded(network, walletAddr ?? ''),
         queryFn: async (): Promise<LoanItem[]> => {
-            const res = await IndexerAPI.loans({ lender: walletAddr!, status: 1 });
+            const hex = await resolveAddressToHex(walletAddr!, network);
+            const res = await IndexerAPI.loans({ lender: hex, status: 1 });
             return res.data.map(mapLoan);
         },
         enabled: !!walletAddr,

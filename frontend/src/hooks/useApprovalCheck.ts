@@ -7,9 +7,9 @@
 
 import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Address } from '@btc-vision/transaction';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { ContractService } from '@/services/ContractService';
+import { resolveAddress } from '@/utils/address';
 import { useNetwork } from './useNetwork';
 import { useTransaction } from './useTransaction';
 
@@ -59,6 +59,7 @@ export function useApprovalCheck(
     ];
 
     const tx = useTransaction({
+        label: 'Approve',
         invalidateKeys: [approvalQueryKey],
         onSuccess: () => {
             // Also refetch approval status after tx confirms
@@ -77,8 +78,9 @@ export function useApprovalCheck(
         queryKey: approvalQueryKey,
         queryFn: async (): Promise<boolean> => {
             const contract = ContractService.getCollection(collectionAddress!, network);
-            const ownerAddr = Address.fromString(walletAddr!.toString());
-            const operatorAddr = Address.fromString(operatorAddress!);
+            // Resolve bech32m addresses → 32-byte Address objects
+            const ownerAddr = await resolveAddress(walletAddr!.toString(), network);
+            const operatorAddr = await resolveAddress(operatorAddress!, network);
             const result = await contract.isApprovedForAll(ownerAddr, operatorAddr);
             return result.properties.approved;
         },
@@ -99,7 +101,8 @@ export function useApprovalCheck(
         await tx.execute(async () => {
             const contract = ContractService.getCollection(collectionAddress, network);
             contract.setSender(walletAddr);
-            const operatorAddr = Address.fromString(operatorAddress);
+            // Resolve bech32m operator → 32-byte Address
+            const operatorAddr = await resolveAddress(operatorAddress, network);
             // Use setApprovalForAll for blanket approval (standard marketplace pattern)
             return await contract.setApprovalForAll(operatorAddr, true);
         });

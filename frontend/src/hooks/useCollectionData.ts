@@ -6,10 +6,10 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { Address } from '@btc-vision/transaction';
 import { ContractService } from '@/services/ContractService';
 import { MetadataService, type TokenMetadata } from '@/services/MetadataService';
 import type { ForgeNetwork } from '@/config/contracts';
+import { resolveAddress } from '@/utils/address';
 
 /* ------------------------------------------------------------------ */
 /*  Query key factory                                                  */
@@ -211,7 +211,7 @@ export function useBalanceOf(network: ForgeNetwork, address: string | undefined,
         queryKey: collectionKeys.balanceOf(network, address ?? '', owner ?? ''),
         queryFn: async () => {
             const contract = ContractService.getCollection(address!, network);
-            const ownerAddr = Address.fromString(owner!);
+            const ownerAddr = await resolveAddress(owner!, network);
             const result = await contract.balanceOf(ownerAddr);
             return result.properties.balance;
         },
@@ -228,7 +228,7 @@ export function useOwnedTokens(network: ForgeNetwork, address: string | undefine
         queryKey: collectionKeys.ownedTokens(network, address ?? '', owner ?? ''),
         queryFn: async (): Promise<bigint[]> => {
             const contract = ContractService.getCollection(address!, network);
-            const ownerAddr = Address.fromString(owner!);
+            const ownerAddr = await resolveAddress(owner!, network);
 
             // First get balance
             const balResult = await contract.balanceOf(ownerAddr);

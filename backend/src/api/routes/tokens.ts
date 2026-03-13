@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../../db/connection.js';
 import { parsePagination } from '../../types/api.js';
+import { addressToRawHex } from '../../utils/address.js';
 
 export function tokenRoutes(): Router {
     const router = Router();
@@ -29,7 +30,8 @@ export function tokenRoutes(): Router {
     router.get('/tokens/owner/:owner', (req, res) => {
         const db = getDb();
         const { page, limit, offset } = parsePagination(req.query as Record<string, unknown>);
-        const owner = req.params.owner;
+        // Convert bech32m → hex to match DB format
+        const owner = addressToRawHex(req.params.owner);
 
         const conditions = ['owner = @owner'];
         const params: Record<string, string | number | null> = { owner };

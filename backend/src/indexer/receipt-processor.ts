@@ -4,7 +4,7 @@
 
 import type { DatabaseSync } from 'node:sqlite';
 import { createLogger } from '../utils/logger.js';
-import { resolveContractHex, paddedHexToBech32m } from '../utils/address.js';
+import { resolveContractHex, paddedHexToBech32m, normalizeAddress } from '../utils/address.js';
 import {
     type DecodedEvent,
     type RawReceiptEvent,
@@ -178,26 +178,33 @@ export async function createReceiptProcessor(db: DatabaseSync) {
             // Emitted by CollectionTemplate.initialize() — auto-registers the
             // collection in the DB + watch set. Fully on-chain, survives DB wipe.
             if (eventName === SELF_REGISTER_EVENT) {
-                const collAddr = params['collectionAddress'] as string | undefined;
                 const creator = params['creator'] as string | undefined;
-                if (collAddr && creator) {
-                    const normalizedColl = paddedHexToBech32m(collAddr.replace(/^0x/i, ''));
+                if (creator) {
+                    // Use the receipt's contractAddress (source) — that's the RPC-level
+                    // 32-byte contract public key hex. The event param 'collectionAddress'
+                    // is also the public key but encoded via writeAddress() which pads it.
+                    // Store the hex directly — enricher's resolveContractHex handles hex.
+                    const collHex = source; // already stripped 0x, lowercase
                     const normalizedCreator = paddedHexToBech32m(creator.replace(/^0x/i, ''));
-                    if (normalizedColl) {
-                        // Insert into DB (idempotent — IGNORE on duplicate)
-                        const maxSupply = params['maxSupply'] ? Number(params['maxSupply']) : 0;
-                        factory.handleCollectionConfigured(
-                            normalizedColl,
-                            normalizedCreator ?? '',
-                            maxSupply,
-                            blockNumber,
-                            txHash,
-                            logIndex,
-                        );
-                        // Queue for watch set resolution
-                        pendingCollections.push(collAddr.replace(/^0x/i, ''));
-                        log.info(`CollectionConfigured → auto-registered ${normalizedColl}`);
-                    }
+                    const maxSupply = params['maxSupply'] ? Number(params['maxSupply']) : 0;
+
+                    // Insert into DB with hex as address (enricher resolves it)
+                    // Pass contractHex for UNIQUE dedup (prevents enrichCollection duplicates)
+                    factory.handleCollectionConfigured(
+                        collHex,
+                        normalizedCreator ?? '',
+                        maxSupply,
+                        blockNumber,
+                        txHash,
+                        logIndex,
+                        collHex, // contractHex = same as address for indexer-sourced inserts
+                    );
+                    // Add directly to watch set (source hex = RPC contractAddress hex)
+                    collectionAddresses.add(collHex);
+                    // Map hex → hex so Minted/Transfer events use the same
+                    // address format as stored in the DB (raw hex, not bech32m)
+                    hexToBech32m.set(collHex, collHex);
+                    log.info(`CollectionConfigured → auto-registered ${collHex} (creator=${normalizedCreator})`);
                 }
                 return;
             }
@@ -257,12 +264,36 @@ export async function createReceiptProcessor(db: DatabaseSync) {
                 // as the raw 32-byte contract public key, but Factory events use padded
                 // witness programs. Resolve via hexToBech32m so all DB rows use the
                 // same bech32m format (opt1sq...) that the Factory created.
+                //
+                // If hexToBech32m doesn't have it, fall back to DB lookup by contract_hex.
+                // This handles collections registered via POST /api/collections/register
+                // or self-deploy before the poller's reloadCollectionAddresses() runs.
                 if (params['collection'] && typeof params['collection'] === 'string') {
                     const rawCollHex = (params['collection'] as string).replace(/^0x/i, '').toLowerCase();
-                    const existingBech32m = hexToBech32m.get(rawCollHex);
+                    let existingBech32m = hexToBech32m.get(rawCollHex);
+
+                    // Fallback: look up by contract_hex in DB
+                    if (!existingBech32m) {
+                        const dbRow = db.prepare(
+                            'SELECT collection_address FROM collections WHERE contract_hex = ?',
+                        ).get(rawCollHex) as { collection_address: string } | undefined;
+                        if (dbRow) {
+                            existingBech32m = dbRow.collection_address;
+                            // Cache for future events in this session
+                            hexToBech32m.set(rawCollHex, existingBech32m);
+                            collectionAddresses.add(rawCollHex);
+                            log.info(`Resolved marketplace collection hex via DB → ${existingBech32m}`);
+                        }
+                    }
+
                     if (existingBech32m) {
                         params['collection'] = existingBech32m;
                         log.debug(`Resolved marketplace collection hex → ${existingBech32m}`);
+                    } else {
+                        // Last resort: store raw hex, let enricher fix it later.
+                        // Do NOT use normalizeAddress() which creates wrong P2TR addresses.
+                        params['collection'] = rawCollHex;
+                        log.warn(`Marketplace collection hex ${rawCollHex} not found — storing as hex`);
                     }
                 }
 
@@ -285,9 +316,12 @@ export async function createReceiptProcessor(db: DatabaseSync) {
                     case 'OfferCancelled':
                         marketplace.handleOfferCancelled(params, blockNumber, txHash, logIndex);
                         break;
-                    case 'CollectionRegistered':
-                        marketplace.handleCollectionRegistered(params, blockNumber, txHash, logIndex);
+                    case 'CollectionRegistered': {
+                        // Pass the raw contract hex so marketplace handler can store it for UNIQUE dedup
+                        const collHexForReg = (params['collection'] as string).replace(/^0x/i, '').toLowerCase();
+                        marketplace.handleCollectionRegistered(params, blockNumber, txHash, logIndex, collHexForReg);
                         break;
+                    }
                 }
                 return;
             }

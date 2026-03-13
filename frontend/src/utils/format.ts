@@ -10,18 +10,19 @@ export function satsToBTC(sats: bigint, decimals = 4): string {
     return `${whole}.${fraction}`;
 }
 
-/** Format BTC with appropriate precision */
+/** Format BTC with appropriate precision (min 5 decimals for small amounts) */
 export function formatBTC(sats: bigint): string {
     const btc = Number(sats) / 1e8;
     if (btc === 0) return '0';
     if (btc < 0.0001) return btc.toFixed(8);
     if (btc < 0.01) return btc.toFixed(6);
-    if (btc < 1) return btc.toFixed(4);
-    return btc.toFixed(3);
+    if (btc < 1) return btc.toFixed(5);
+    return btc.toFixed(4);
 }
 
 /** Truncate address for display */
-export function truncateAddress(address: string, startChars = 6, endChars = 4): string {
+export function truncateAddress(address: string | null | undefined, startChars = 6, endChars = 4): string {
+    if (!address) return '???';
     if (address.length <= startChars + endChars + 3) return address;
     return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
 }

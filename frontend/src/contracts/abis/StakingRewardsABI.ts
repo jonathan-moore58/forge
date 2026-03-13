@@ -22,10 +22,8 @@ export const STAKING_REWARDS_ABI: BitcoinInterfaceAbi = [
         type: BitcoinAbiTypes.Function,
         inputs: [
             { name: 'poolId', type: ABIDataTypes.UINT256 },
-            { name: 'collection', type: ABIDataTypes.ADDRESS },
             { name: 'tokenId', type: ABIDataTypes.UINT256 },
             { name: 'lockDurationBlocks', type: ABIDataTypes.UINT256 },
-            { name: 'rarityTier', type: ABIDataTypes.UINT256 },
         ],
         outputs: [
             { name: 'success', type: ABIDataTypes.BOOL },
@@ -36,11 +34,10 @@ export const STAKING_REWARDS_ABI: BitcoinInterfaceAbi = [
         type: BitcoinAbiTypes.Function,
         inputs: [
             { name: 'poolId', type: ABIDataTypes.UINT256 },
-            { name: 'collection', type: ABIDataTypes.ADDRESS },
             { name: 'tokenId', type: ABIDataTypes.UINT256 },
         ],
         outputs: [
-            { name: 'success', type: ABIDataTypes.BOOL },
+            { name: 'rewardsClaimed', type: ABIDataTypes.UINT256 },
         ],
     },
     {
@@ -112,14 +109,14 @@ export const STAKING_REWARDS_ABI: BitcoinInterfaceAbi = [
         type: BitcoinAbiTypes.Function,
         constant: true,
         inputs: [
-            { name: 'poolId', type: ABIDataTypes.UINT256 },
             { name: 'user', type: ABIDataTypes.ADDRESS },
+            { name: 'poolId', type: ABIDataTypes.UINT256 },
         ],
         outputs: [
             { name: 'stakedCount', type: ABIDataTypes.UINT256 },
             { name: 'pendingRewards', type: ABIDataTypes.UINT256 },
             { name: 'lockEndBlock', type: ABIDataTypes.UINT256 },
-            { name: 'multiplierBps', type: ABIDataTypes.UINT256 },
+            { name: 'multiplier', type: ABIDataTypes.UINT256 },
         ],
     },
     {
@@ -184,7 +181,7 @@ export interface UserStakeData {
     stakedCount: bigint;
     pendingRewards: bigint;
     lockEndBlock: bigint;
-    multiplierBps: bigint;
+    multiplier: bigint;
 }
 
 export interface StakingStatsData {
@@ -195,12 +192,12 @@ export interface StakingStatsData {
 
 export interface IStakingRewardsContract extends BaseContractProperties {
     createPool(collection: Address, rewardToken: Address, rewardPerBlock: bigint, startBlock: bigint, endBlock: bigint): Promise<CallResult<{ poolId: bigint }>>;
-    stake(poolId: bigint, collection: Address, tokenId: bigint, lockDurationBlocks: bigint, rarityTier: bigint): Promise<CallResult<{ success: boolean }>>;
-    unstake(poolId: bigint, collection: Address, tokenId: bigint): Promise<CallResult<{ success: boolean }>>;
+    stake(poolId: bigint, tokenId: bigint, lockDurationBlocks: bigint): Promise<CallResult<{ success: boolean }>>;
+    unstake(poolId: bigint, tokenId: bigint): Promise<CallResult<{ rewardsClaimed: bigint }>>;
     claimRewards(poolId: bigint): Promise<CallResult<{ amount: bigint }>>;
     setRarityMultiplier(poolId: bigint, rarityTier: bigint, multiplierBps: bigint): Promise<CallResult<{ success: boolean }>>;
     setLockBonus(lockDurationBlocks: bigint, bonusBps: bigint): Promise<CallResult<{ success: boolean }>>;
     getPool(poolId: bigint): Promise<CallResult<PoolData>>;
-    getUserStakeInfo(poolId: bigint, user: Address): Promise<CallResult<UserStakeData>>;
+    getUserStakeInfo(user: Address, poolId: bigint): Promise<CallResult<UserStakeData>>;
     stakingStats(): Promise<CallResult<StakingStatsData>>;
 }

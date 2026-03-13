@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../../db/connection.js';
 import { parsePagination } from '../../types/api.js';
+import { addressToRawHex } from '../../utils/address.js';
 
 export function lendingRoutes(): Router {
     const router = Router();
@@ -23,11 +24,13 @@ export function lendingRoutes(): Router {
         }
         if (req.query.borrower) {
             conditions.push('borrower = @borrower');
-            params.borrower = req.query.borrower as string;
+            // Convert bech32m → hex to match DB format (normalizeAddress stores
+            // wallet P2TR addresses as lowercase 64-char hex)
+            params.borrower = addressToRawHex(req.query.borrower as string);
         }
         if (req.query.lender) {
             conditions.push('lender = @lender');
-            params.lender = req.query.lender as string;
+            params.lender = addressToRawHex(req.query.lender as string);
         }
         if (req.query.collection) {
             conditions.push('collection_address = @collection');

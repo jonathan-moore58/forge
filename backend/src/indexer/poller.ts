@@ -15,9 +15,11 @@ const log = createLogger('poller');
 
 /**
  * How many blocks to fetch per batch during catchup.
- * Async curl-fetch handles parallel spawns without ENOBUFS.
+ * Light blocks (< 3300): large batches. Heavy blocks (3300+): smaller batches.
  */
-const CATCHUP_BATCH_SIZE = 10;
+const CATCHUP_BATCH_LIGHT = 20;
+const CATCHUP_BATCH_HEAVY = 5;
+const HEAVY_BLOCK_THRESHOLD = 3300;
 
 // ── Raw RPC types (subset we need) ──────────────────────────────────
 
@@ -42,12 +44,16 @@ interface RpcReceipt {
 
 // ── JSON-RPC helper ─────────────────────────────────────────────────
 
-async function rpcCall<T = unknown>(method: string, params: unknown[] = []): Promise<T> {
+async function rpcCall<T = unknown>(method: string, params: unknown[] = [], timeoutMs = 60_000): Promise<T> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch(config.rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params }),
+        signal: controller.signal,
     });
+    clearTimeout(timer);
 
     const json = (await res.json()) as { result?: T; error?: { message: string; code?: number } };
     if (json.error) {
@@ -138,22 +144,25 @@ export function startPoller(): { stop: () => void } {
         // 3. Process blocks — in batches during catchup, one-by-one at tip
         while (lastBlock < tip && running) {
             const remaining = tip - lastBlock;
-            const batchSize = remaining > CATCHUP_BATCH_SIZE ? CATCHUP_BATCH_SIZE : remaining;
             const batchStart = lastBlock + 1;
+            // Adaptive batch size: heavy blocks (3300+) get small batches
+            const maxBatch = batchStart >= HEAVY_BLOCK_THRESHOLD ? CATCHUP_BATCH_HEAVY : CATCHUP_BATCH_LIGHT;
+            const batchSize = remaining > maxBatch ? maxBatch : remaining;
             const batchEnd = lastBlock + batchSize;
 
-            if (remaining > CATCHUP_BATCH_SIZE) {
-                if (batchStart % 100 < CATCHUP_BATCH_SIZE || batchStart === lastBlock + 1) {
-                    log.info(`Catchup: blocks ${batchStart}–${batchEnd} / ${tip} (${remaining} remaining)`);
+            if (remaining > maxBatch) {
+                if (batchStart % 100 < maxBatch || batchStart === lastBlock + 1) {
+                    log.info(`Catchup: blocks ${batchStart}–${batchEnd} / ${tip} (${remaining} remaining, batch=${batchSize})`);
                 }
             } else {
                 log.info(`Processing block ${batchStart}/${tip}…`);
             }
 
-            // Fetch blocks in parallel
+            // Fetch blocks in parallel (longer timeout for heavy blocks)
             const heights = Array.from({ length: batchSize }, (_, i) => batchStart + i);
+            const fetchTimeout = batchStart >= HEAVY_BLOCK_THRESHOLD ? 120_000 : 60_000;
             const blocks = await Promise.all(
-                heights.map((h) => rpcCall<RpcBlock | null>('btc_getBlockByNumber', [h, true]).catch((err) => {
+                heights.map((h) => rpcCall<RpcBlock | null>('btc_getBlockByNumber', [h, true], fetchTimeout).catch((err) => {
                     log.warn(`Failed to fetch block ${h}:`, err);
                     return null;
                 })),
@@ -175,8 +184,8 @@ export function startPoller(): { stop: () => void } {
 
             lastBlock = lastSuccessful;
 
-            // Pause between batches to let system buffers recover (curl ENOBUFS fix)
-            if (remaining > CATCHUP_BATCH_SIZE) await delay(200);
+            // Minimal pause between batches
+            if (remaining > maxBatch) await delay(100);
         }
     }
 
@@ -208,19 +217,23 @@ export function startPoller(): { stop: () => void } {
             }
         }
 
-        // Fetch receipts for txs that didn't have inline events
-        for (const tx of block.transactions ?? []) {
-            if (tx.OPNetType === 'Generic') continue;
-            if ((tx as any).events) continue;
-            try {
-                const receipt = await rpcCall<RpcReceipt>('btc_getTransactionReceipt', [tx.hash]);
-                if (receipt?.events) {
-                    allTxEvents.push({ events: receipt.events, hash: tx.hash });
-                }
-            } catch (err) {
-                log.warn(`Failed to fetch receipt for ${tx.hash}:`, err);
+        // Fetch receipts in parallel for txs that didn't have inline events
+        const needReceipt = (block.transactions ?? []).filter(
+            (tx) => tx.OPNetType !== 'Generic' && !(tx as any).events,
+        );
+        const RECEIPT_BATCH = 50;
+        for (let i = 0; i < needReceipt.length; i += RECEIPT_BATCH) {
+            const batch = needReceipt.slice(i, i + RECEIPT_BATCH);
+            const results = await Promise.all(
+                batch.map((tx) =>
+                    rpcCall<RpcReceipt>('btc_getTransactionReceipt', [tx.hash])
+                        .then((r) => (r?.events ? { events: r.events, hash: tx.hash } : null))
+                        .catch(() => null),
+                ),
+            );
+            for (const r of results) {
+                if (r) allTxEvents.push(r);
             }
-            await delay(50);
         }
 
         // Process everything inside a single DB transaction

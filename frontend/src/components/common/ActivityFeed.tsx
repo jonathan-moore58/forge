@@ -46,13 +46,13 @@ const ACTIVITY_VERBS: Record<string, string> = {
 function toActivityEntry(a: IndexerActivity, currentBlock: number): ActivityEntry {
     const type: ActivityType = (a.event_type === 'list' ? 'listing' : a.event_type) as ActivityType;
     return {
-        id: `${a.tx_hash}-${a.id}`,
+        id: `${a.tx_hash ?? 'unknown'}-${a.id ?? 0}`,
         type: type in ACTIVITY_COLORS ? type : 'transfer',
         user: a.from_address || a.to_address || '???',
-        item: `#${a.token_id}`,
+        item: `#${a.token_id ?? 0}`,
         collection: truncateAddress(a.collection_address, 8, 4),
         price: a.price ? (Number(a.price) / 1e8).toFixed(4) : '0',
-        blocksAgo: Math.max(0, currentBlock - a.block_number),
+        blocksAgo: Math.max(0, currentBlock - (a.block_number ?? 0)),
     };
 }
 

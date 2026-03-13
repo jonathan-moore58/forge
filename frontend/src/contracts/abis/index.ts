@@ -58,3 +58,9 @@ export {
     type LendingStatsData,
     type INFTLendingContract,
 } from './NFTLendingABI';
+
+// --- OP-20 Token (minimal ABI for lending approval flow) ---
+export {
+    OP20_ABI,
+    type IOP20Contract,
+} from './OP20ABI';

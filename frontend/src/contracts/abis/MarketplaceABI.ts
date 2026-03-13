@@ -39,13 +39,11 @@ export const MARKETPLACE_ABI: BitcoinInterfaceAbi = [
     {
         name: 'makeOffer',
         type: BitcoinAbiTypes.Function,
-        payable: true,
         inputs: [
             { name: 'collection', type: ABIDataTypes.ADDRESS },
             { name: 'tokenId', type: ABIDataTypes.UINT256 },
             { name: 'price', type: ABIDataTypes.UINT256 },
             { name: 'expiryBlock', type: ABIDataTypes.UINT256 },
-            { name: 'isCollectionWide', type: ABIDataTypes.BOOL },
         ],
         outputs: [
             { name: 'offerId', type: ABIDataTypes.UINT256 },
@@ -294,7 +292,7 @@ export interface IMarketplaceContract extends BaseContractProperties {
     listNFT(collection: Address, tokenId: bigint, price: bigint): Promise<CallResult<{ listingId: bigint }>>;
     buyNFT(listingId: bigint): Promise<CallResult<{ success: boolean }>>;
     cancelListing(listingId: bigint): Promise<CallResult<{ success: boolean }>>;
-    makeOffer(collection: Address, tokenId: bigint, price: bigint, expiryBlock: bigint, isCollectionWide: boolean): Promise<CallResult<{ offerId: bigint }>>;
+    makeOffer(collection: Address, tokenId: bigint, price: bigint, expiryBlock: bigint): Promise<CallResult<{ offerId: bigint }>>;
     acceptOffer(offerId: bigint, tokenId: bigint): Promise<CallResult<{ success: boolean }>>;
     cancelOffer(offerId: bigint): Promise<CallResult<{ success: boolean }>>;
     getListing(listingId: bigint): Promise<CallResult<ListingData>>;

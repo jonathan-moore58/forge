@@ -14,14 +14,7 @@ import { useAllCollections, useTotalCollections } from '@/hooks/useRegistry';
 import { useCollectionStats } from '@/hooks/useMarketplace';
 import { CollectionImage } from '@/components/common/CollectionImage';
 import { LiveTicker, RecentActivitySection } from '@/components/common/ActivityFeed';
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function formatBTC(sats: bigint): string {
-    return (Number(sats) / 1e8).toFixed(2);
-}
+import { formatBTC } from '@/utils/format';
 
 /**
  * TrendingRow — a single row in the trending table that fetches its own

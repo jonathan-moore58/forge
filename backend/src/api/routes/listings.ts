@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../../db/connection.js';
 import { parsePagination } from '../../types/api.js';
+import { addressToRawHex } from '../../utils/address.js';
 
 export function listingRoutes(): Router {
     const router = Router();
@@ -27,7 +28,8 @@ export function listingRoutes(): Router {
         }
         if (req.query.seller) {
             conditions.push('seller = @seller');
-            params.seller = req.query.seller as string;
+            // Convert bech32m → hex to match DB format
+            params.seller = addressToRawHex(req.query.seller as string);
         }
         // B-C3: Use string-length + lexicographic comparison for BigInt-safe price filtering
         if (req.query.minPrice) {

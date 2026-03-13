@@ -224,8 +224,8 @@ export function DashboardPage(): JSX.Element {
 
     /* ── Real blockchain hooks ── */
     const { network } = useNetwork();
-    const { address: rawAddr } = useWalletConnect();
-    const walletAddress = rawAddr ? String(rawAddr) : undefined;
+    const { walletAddress: rawAddr } = useWalletConnect();
+    const walletAddress = rawAddr ? (typeof rawAddr === 'string' ? rawAddr : String(rawAddr)) : undefined;
     const { data: marketStats } = useMarketStats(network);
     const { data: totalCollections } = useTotalCollections(network);
 

@@ -32,10 +32,11 @@ function satsToBtc(sats: string | null | undefined): number {
 
 function formatBtc(sats: string | null | undefined): string {
     const btc = satsToBtc(sats);
-    if (btc === 0) return '--';
-    if (btc < 0.001) return btc.toFixed(8);
-    if (btc < 1) return btc.toFixed(4);
-    return btc.toFixed(2);
+    if (btc === 0) return '0';
+    if (btc < 0.0001) return btc.toFixed(8);
+    if (btc < 0.01) return btc.toFixed(6);
+    if (btc < 1) return btc.toFixed(5);
+    return btc.toFixed(4);
 }
 
 function shortAddr(addr: string): string {
@@ -156,9 +157,9 @@ function CollectionCard({
                             paddingTop: '12px',
                             borderTop: `1px solid ${theme.colors.border.subtle}`,
                         }}>
-                            <StatCell label="Floor" value={formatBtc(stats?.floor_price)} suffix={stats?.floor_price ? ' BTC' : ''} />
-                            <StatCell label="Volume" value={formatBtc(stats?.total_volume)} suffix={stats?.total_volume ? ' BTC' : ''} />
-                            <StatCell label="Listed" value={stats?.listed_count?.toString() ?? '0'} />
+                            <StatCell label="Floor" value={formatBtc(stats?.floorPrice)} suffix={stats?.floorPrice ? ' BTC' : ''} />
+                            <StatCell label="Volume" value={formatBtc(stats?.totalVolume)} suffix={stats?.totalVolume ? ' BTC' : ''} />
+                            <StatCell label="Listed" value={stats?.listedCount?.toString() ?? '0'} />
                             <StatCell label="Supply" value={collection.totalSupply?.toString() ?? '--'} />
                         </div>
                     </div>
@@ -305,12 +306,12 @@ export function MarketplacePage(): JSX.Element {
         // Sort — collections with activity rank higher
         switch (sortBy) {
             case 'volume':
-                result.sort((a, b) => satsToBtc(b.stats?.total_volume) - satsToBtc(a.stats?.total_volume));
+                result.sort((a, b) => satsToBtc(b.stats?.totalVolume) - satsToBtc(a.stats?.totalVolume));
                 break;
             case 'floor':
                 result.sort((a, b) => {
-                    const af = satsToBtc(a.stats?.floor_price);
-                    const bf = satsToBtc(b.stats?.floor_price);
+                    const af = satsToBtc(a.stats?.floorPrice);
+                    const bf = satsToBtc(b.stats?.floorPrice);
                     if (af === 0 && bf === 0) return 0;
                     if (af === 0) return 1;
                     if (bf === 0) return -1;
@@ -318,7 +319,7 @@ export function MarketplacePage(): JSX.Element {
                 });
                 break;
             case 'listed':
-                result.sort((a, b) => (b.stats?.listed_count ?? 0) - (a.stats?.listed_count ?? 0));
+                result.sort((a, b) => (b.stats?.listedCount ?? 0) - (a.stats?.listedCount ?? 0));
                 break;
             case 'recent':
                 result.sort((a, b) => Number(b.registeredAt - a.registeredAt));

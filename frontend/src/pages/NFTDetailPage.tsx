@@ -8,6 +8,7 @@ import { GlassCard } from '@/components/common/GlassCard';
 import { Button } from '@/components/common/Button';
 import { TabBar } from '@/components/common/TabBar';
 import { ListingModal } from '@/components/common/ListingModal';
+import { CreateAuctionModal } from '@/components/common/CreateAuctionModal';
 import { useNetwork } from '@/hooks/useNetwork';
 import { useTokenMetadata, useOwnerOf, useCollectionMetadata } from '@/hooks/useCollectionData';
 import { useListingForNFT, useListing } from '@/hooks/useMarketplace';
@@ -446,7 +447,8 @@ export function NFTDetailPage(): JSX.Element {
 
     /* ---- Owner detection ---- */
     const isOwner = !!(walletAddr && ownerAddr && String(walletAddr).toLowerCase() === String(ownerAddr).toLowerCase());
-    const isListed = !!activeListing && activeListing.status === 0n;
+    // Verify the listing is active AND belongs to this specific token
+    const isListed = !!activeListing && activeListing.status === 0n && activeListing.tokenId === tid;
 
     /* ---- Sale history from indexer ---- */
     const { data: saleHistory } = useQuery({
@@ -499,8 +501,9 @@ export function NFTDetailPage(): JSX.Element {
         );
     }, [offers]);
 
-    /* ---- Listing modal ---- */
+    /* ---- Modals ---- */
     const [showListingModal, setShowListingModal] = useState(false);
+    const [showAuctionModal, setShowAuctionModal] = useState(false);
 
     /* ---- Computed NFT data — no mock fallbacks ---- */
     const lastSalePrice = sales.length > 0 && sales[0]?.price
@@ -508,7 +511,9 @@ export function NFTDetailPage(): JSX.Element {
         : 0;
     const nft = {
         tokenId: tid !== undefined ? Number(tid) : 0,
-        name: tokenMeta?.name ?? `#${tokenId ?? '?'}`,
+        name: (tokenMeta?.name && tokenMeta.name !== 'Unrevealed')
+            ? tokenMeta.name
+            : (collectionMeta?.name ? `${collectionMeta.name} #${tokenId ?? '?'}` : `#${tokenId ?? '?'}`),
         collection: collectionMeta?.name ?? (collection ? `${collection.slice(0, 8)}...` : 'Unknown'),
         collectionSlug: collection ?? '',
         description: tokenMeta?.description ?? '',
@@ -594,21 +599,36 @@ export function NFTDetailPage(): JSX.Element {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            overflow: 'hidden',
                         }}>
                             {/* Rarity overlay */}
-                            <div style={{ position: 'absolute', top: '16px', left: '16px' }}>
+                            <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 2 }}>
                                 <RarityBadge rank={nft.rarity} total={nft.rarityTotal} />
                             </div>
-                            {/* Placeholder */}
-                            <div style={{
-                                fontFamily: theme.fonts.heading,
-                                fontSize: '80px',
-                                fontWeight: 700,
-                                opacity: 0.06,
-                                color: theme.colors.text.primary,
-                            }}>
-                                #{nft.tokenId}
-                            </div>
+                            {/* NFT Image */}
+                            {tokenMeta?.image ? (
+                                <img
+                                    src={tokenMeta.image}
+                                    alt={nft.name}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        position: 'absolute',
+                                        inset: 0,
+                                    }}
+                                />
+                            ) : (
+                                <div style={{
+                                    fontFamily: theme.fonts.heading,
+                                    fontSize: '80px',
+                                    fontWeight: 700,
+                                    opacity: 0.06,
+                                    color: theme.colors.text.primary,
+                                }}>
+                                    #{nft.tokenId}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -779,16 +799,26 @@ export function NFTDetailPage(): JSX.Element {
                                         </Button>
                                     </>
                                 ) : (
-                                    <Button
-                                        size="lg"
-                                        fullWidth
-                                        onClick={() => setShowListingModal(true)}
-                                    >
-                                        List for Sale
-                                    </Button>
+                                    <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+                                        <Button
+                                            size="lg"
+                                            fullWidth
+                                            onClick={() => setShowListingModal(true)}
+                                        >
+                                            List for Sale
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            size="lg"
+                                            fullWidth
+                                            onClick={() => setShowAuctionModal(true)}
+                                        >
+                                            Create Auction
+                                        </Button>
+                                    </div>
                                 )}
                             </div>
-                        ) : (
+                        ) : isListed ? (
                             <div style={{ display: 'flex', gap: theme.spacing.sm }}>
                                 <Button
                                     size="lg"
@@ -804,7 +834,7 @@ export function NFTDetailPage(): JSX.Element {
                                         }
                                     }}
                                 >
-                                    {marketActions.isPending ? 'Processing...' : isListed ? `Buy Now — ${nft.price} BTC` : 'Not Listed'}
+                                    {marketActions.isPending ? 'Processing...' : `Buy Now — ${nft.price} BTC`}
                                 </Button>
                                 <Button
                                     variant="secondary"
@@ -814,6 +844,32 @@ export function NFTDetailPage(): JSX.Element {
                                 >
                                     Make Offer
                                 </Button>
+                            </div>
+                        ) : (
+                            <div style={{
+                                padding: '12px',
+                                textAlign: 'center',
+                                color: theme.colors.text.tertiary,
+                                fontSize: '14px',
+                                fontWeight: 500,
+                            }}>
+                                Not listed for sale
+                            </div>
+                        )}
+
+                        {/* Transaction error display */}
+                        {marketActions.error && (
+                            <div style={{
+                                marginTop: theme.spacing.sm,
+                                padding: '10px 14px',
+                                background: 'rgba(255,60,60,0.08)',
+                                border: `1px solid rgba(255,60,60,0.2)`,
+                                borderRadius: theme.radii.md,
+                                fontSize: '13px',
+                                color: '#ff6b6b',
+                                lineHeight: 1.5,
+                            }}>
+                                {marketActions.error}
                             </div>
                         )}
                     </div>
@@ -1153,7 +1209,6 @@ export function NFTDetailPage(): JSX.Element {
                                     tid,
                                     priceSats,
                                     expiry,
-                                    false,
                                 );
                                 setShowOfferModal(false);
                             } catch (err) {
@@ -1169,6 +1224,17 @@ export function NFTDetailPage(): JSX.Element {
                 <ListingModal
                     open={showListingModal}
                     onClose={() => setShowListingModal(false)}
+                    collectionAddress={collection}
+                    tokenId={tid}
+                    tokenName={nft.name}
+                />
+            )}
+
+            {/* Auction Modal (owner only) */}
+            {collection && tid !== undefined && (
+                <CreateAuctionModal
+                    open={showAuctionModal}
+                    onClose={() => setShowAuctionModal(false)}
                     collectionAddress={collection}
                     tokenId={tid}
                     tokenName={nft.name}

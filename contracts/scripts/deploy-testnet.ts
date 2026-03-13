@@ -146,10 +146,10 @@ const MAX_SATS_PER_TX = 100_000n;
 const ALREADY_DEPLOYED = {
     template: 'opt1sqp8wuaggm9zwcjkwmqgprgnaqv3ahpxhu5rnmkqc',
     factory: 'opt1sqqewmpmd2vwg67fflwdmu202nwhajrqw2yd9esez',
-    marketplace: 'opt1sqrj0pqrzjvytds6l09r8n3mpfwzp0qpqsgy6a70q',
-    auctionHouse: 'opt1sqrnk0fma3tkpkfgpsqswhcn5n5zhpcmdnyeanrf3',
-    staking: 'opt1sqrnqrnxwcyg6ge6f6j2efhmsjfg6xa7u6yyhs6rz',
-    lending: 'opt1sqp49e6ftwtpt8f9sc8plzqu5rtdrp7zn05wyjzrp',
+    marketplace: 'opt1sqpj37ym9rx7ud0spwgpf68mwpmxs8dpgxu204jek',
+    auctionHouse: 'opt1sqqvah7sfn8snf7cj0rypzgxnwxklt6dv3sdghxff',
+    staking: 'opt1sqzqqmlxlq5tmmrs933905dxuu93l604s2skqgq6d',
+    lending: 'opt1sqpvakn6n4s3y3ejx3sjpudxu39jgngw6pslu7f3x',
 };
 
 // ─── Paths ───────────────────────────────────────────────────────────────────

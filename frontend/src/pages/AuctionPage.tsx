@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWalletConnect } from '@btc-vision/walletconnect';
 import { theme } from '@/styles/theme';
 import { Button } from '@/components/common/Button';
 import { StatCard } from '@/components/common/StatCard';
 import { TabBar } from '@/components/common/TabBar';
 import { BlockCountdown } from '@/components/common/FlipCountdown';
+import { NFTImage } from '@/components/common/NFTImage';
 import { useNetwork } from '@/hooks/useNetwork';
 import { useBlockNumber } from '@/hooks/useBlockNumber';
 import { useAuctionStats, useAllAuctions } from '@/hooks/useAuctions';
@@ -35,12 +38,14 @@ interface Auction {
     readonly type: AuctionType;
     readonly startBlock: number;
     readonly endBlock: number;
+    readonly startPrice: number;
     readonly currentBid: number;
     readonly reservePrice: number;
     readonly reserveMet: boolean;
     readonly bidCount: number;
     readonly bids: readonly BidEntry[];
     readonly seller: string;
+    readonly sellerFull: string;
     readonly antiSnipeBlocks: number;
     readonly antiSnipeExtension: number;
     readonly wasExtended: boolean;
@@ -52,6 +57,27 @@ interface Auction {
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
+
+function shortenAddr(addr: string): string {
+    if (addr.length < 12) return addr;
+    return `${addr.slice(0, 8)}...${addr.slice(-4)}`;
+}
+
+/**
+ * Hook to fetch collection info from the indexer for an auction card.
+ * Returns name, icon, base_uri. Cached 5 minutes.
+ */
+function useAuctionCollectionInfo(collectionAddress: string | undefined) {
+    return useQuery({
+        queryKey: ['auction-collection-info', collectionAddress],
+        queryFn: async () => {
+            const res = await IndexerAPI.collection(collectionAddress!);
+            return res.data;
+        },
+        enabled: !!collectionAddress,
+        staleTime: 5 * 60_000,
+    });
+}
 
 function getDutchPrice(auction: Auction, block: number): number {
     if (auction.dutchStartPrice === null || auction.dutchEndPrice === null || auction.dutchDecayPerBlock === null) return 0;
@@ -125,6 +151,10 @@ function DutchAuctionCard({ auction, index, currentBlock, onBuy }: { readonly au
     const currentPrice = getDutchPrice(auction, currentBlock);
     const remaining = Math.max(0, auction.endBlock - currentBlock);
     const progress = Math.min(100, ((currentBlock - auction.startBlock) / (auction.endBlock - auction.startBlock)) * 100);
+    const [buyError, setBuyError] = useState<string | null>(null);
+    const [isBuying, setIsBuying] = useState(false);
+    const { data: collectionInfo } = useAuctionCollectionInfo(auction.collectionSlug);
+    const collectionName = collectionInfo?.name || shortenAddr(auction.collectionSlug);
 
     return (
         <motion.div
@@ -136,29 +166,35 @@ function DutchAuctionCard({ auction, index, currentBlock, onBuy }: { readonly au
                 background: theme.colors.bg.card, border: `1px solid ${theme.colors.border.subtle}`,
                 borderRadius: theme.radii.xl, overflow: 'hidden',
             }}>
-                <div style={{
-                    height: '180px',
-                    background: 'linear-gradient(135deg, rgba(153,69,255,0.12) 0%, rgba(0,212,255,0.08) 100%)',
-                    position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                    <span style={{ fontFamily: theme.fonts.mono, fontSize: '24px', fontWeight: 700, opacity: 0.08 }}>
-                        #{auction.tokenId}
-                    </span>
+                {/* NFT Image */}
+                <div style={{ position: 'relative' }}>
+                    <NFTImage
+                        baseUri={collectionInfo?.base_uri ?? ''}
+                        tokenId={auction.tokenId}
+                        index={index}
+                        aspectRatio="16/9"
+                        style={{ borderRadius: 0 }}
+                    />
                     <div style={{
                         position: 'absolute', top: '10px', right: '10px', padding: '4px 10px',
-                        borderRadius: theme.radii.full, background: 'rgba(153,69,255,0.1)',
-                        border: '1px solid rgba(153,69,255,0.25)', fontSize: '10px', fontWeight: 700,
+                        borderRadius: theme.radii.full, background: 'rgba(153,69,255,0.15)',
+                        border: '1px solid rgba(153,69,255,0.3)', fontSize: '10px', fontWeight: 700,
                         color: theme.colors.brand.purple, letterSpacing: '0.04em',
+                        backdropFilter: 'blur(8px)',
                     }}>DUTCH</div>
                 </div>
 
                 <div style={{ padding: '20px' }}>
-                    <div style={{ fontSize: '12px', color: theme.colors.brand.purple, fontWeight: 500 }}>
-                        {auction.collection}
-                    </div>
-                    <h3 style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, marginTop: '4px', marginBottom: theme.spacing.md }}>
-                        {auction.name}
-                    </h3>
+                    <Link to={`/collection/${auction.collectionSlug}`} style={{ textDecoration: 'none' }}>
+                        <div style={{ fontSize: '12px', color: theme.colors.brand.purple, fontWeight: 500, cursor: 'pointer' }}>
+                            {collectionName}
+                        </div>
+                    </Link>
+                    <Link to={`/nft/${auction.collectionSlug}/${auction.tokenId}`} style={{ textDecoration: 'none' }}>
+                        <h3 style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, marginTop: '4px', marginBottom: theme.spacing.md, color: theme.colors.text.primary, cursor: 'pointer' }}>
+                            {collectionName} #{auction.tokenId}
+                        </h3>
+                    </Link>
 
                     <div style={{
                         padding: '14px', background: theme.colors.bg.overlay, borderRadius: theme.radii.md,
@@ -166,10 +202,10 @@ function DutchAuctionCard({ auction, index, currentBlock, onBuy }: { readonly au
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <span style={{ fontSize: '11px', color: theme.colors.text.tertiary, fontFamily: theme.fonts.mono }}>
-                                Start: {auction.dutchStartPrice} BTC
+                                Start: {auction.dutchStartPrice?.toFixed(4)} BTC
                             </span>
                             <span style={{ fontSize: '11px', color: theme.colors.text.tertiary, fontFamily: theme.fonts.mono }}>
-                                Floor: {auction.dutchEndPrice} BTC
+                                Floor: {auction.dutchEndPrice?.toFixed(4)} BTC
                             </span>
                         </div>
                         <div style={{
@@ -192,8 +228,39 @@ function DutchAuctionCard({ auction, index, currentBlock, onBuy }: { readonly au
                         borderTop: `1px solid ${theme.colors.border.subtle}`,
                     }}>
                         <BlockCountdown blocksRemaining={remaining} />
-                        <Button size="md" onClick={() => onBuy?.(BigInt(auction.id), BigInt(Math.round(currentPrice * 1e8)))}>Buy at {currentPrice.toFixed(4)}</Button>
+                        <Button
+                            size="md"
+                            loading={isBuying}
+                            disabled={isBuying}
+                            onClick={async () => {
+                                setBuyError(null);
+                                setIsBuying(true);
+                                try {
+                                    await onBuy?.(BigInt(auction.id), BigInt(Math.round(currentPrice * 1e8)));
+                                } catch (err) {
+                                    console.error('[FORGE][dutch-buy] Error:', err);
+                                    setBuyError(err instanceof Error ? err.message : String(err));
+                                } finally {
+                                    setIsBuying(false);
+                                }
+                            }}
+                        >
+                            Buy at {currentPrice.toFixed(4)}
+                        </Button>
                     </div>
+                    {buyError && (
+                        <div style={{
+                            marginTop: '8px',
+                            padding: '8px 12px',
+                            borderRadius: theme.radii.sm,
+                            background: 'rgba(255,59,48,0.06)',
+                            border: '1px solid rgba(255,59,48,0.15)',
+                            fontSize: '12px',
+                            color: theme.colors.status.error,
+                        }}>
+                            {buyError}
+                        </div>
+                    )}
                 </div>
             </div>
         </motion.div>
@@ -202,9 +269,16 @@ function DutchAuctionCard({ auction, index, currentBlock, onBuy }: { readonly au
 
 function EnglishAuctionCard({ auction, index, currentBlock, onBid }: { readonly auction: Auction; readonly index: number; readonly currentBlock: number; readonly onBid?: (auctionId: bigint, amount: bigint) => Promise<unknown> }): JSX.Element {
     const [bidAmount, setBidAmount] = useState('');
+    const [bidError, setBidError] = useState<string | null>(null);
+    const [isBidding, setIsBidding] = useState(false);
     const remaining = Math.max(0, auction.endBlock - currentBlock);
     const isNearEnd = remaining <= auction.antiSnipeBlocks && remaining > 0;
-    const minBid = auction.currentBid * 1.05;
+    // Contract rule: first bid must be >= startPrice; subsequent bids >= highestBid * 1.05
+    const minBid = auction.currentBid > 0
+        ? auction.currentBid * 1.05
+        : Math.max(auction.startPrice, 0.0001);
+    const { data: collectionInfo } = useAuctionCollectionInfo(auction.collectionSlug);
+    const collectionName = collectionInfo?.name || shortenAddr(auction.collectionSlug);
 
     return (
         <motion.div
@@ -218,33 +292,36 @@ function EnglishAuctionCard({ auction, index, currentBlock, onBid }: { readonly 
                 borderRadius: theme.radii.xl, overflow: 'hidden',
                 boxShadow: isNearEnd ? '0 0 24px rgba(255,107,0,0.06)' : 'none',
             }}>
-                <div style={{
-                    height: '180px',
-                    background: 'linear-gradient(135deg, rgba(255,107,0,0.1) 0%, rgba(153,69,255,0.06) 100%)',
-                    position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                    <span style={{ fontFamily: theme.fonts.mono, fontSize: '24px', fontWeight: 700, opacity: 0.08 }}>
-                        #{auction.tokenId}
-                    </span>
+                {/* NFT Image */}
+                <div style={{ position: 'relative' }}>
+                    <NFTImage
+                        baseUri={collectionInfo?.base_uri ?? ''}
+                        tokenId={auction.tokenId}
+                        index={index}
+                        aspectRatio="16/9"
+                        style={{ borderRadius: 0 }}
+                    />
                     {auction.wasExtended && (
                         <motion.div
                             animate={{ opacity: [0.6, 1, 0.6] }}
                             transition={{ duration: 2, repeat: Infinity }}
                             style={{
                                 position: 'absolute', top: '10px', left: '10px', padding: '4px 10px',
-                                borderRadius: theme.radii.full, background: 'rgba(245,158,11,0.12)',
-                                border: '1px solid rgba(245,158,11,0.25)', fontSize: '10px', fontWeight: 700,
+                                borderRadius: theme.radii.full, background: 'rgba(245,158,11,0.15)',
+                                border: '1px solid rgba(245,158,11,0.3)', fontSize: '10px', fontWeight: 700,
                                 color: theme.colors.brand.gold, letterSpacing: '0.04em',
+                                backdropFilter: 'blur(8px)',
                             }}
                         >ANTI-SNIPE EXTENDED</motion.div>
                     )}
                     <div style={{
                         position: 'absolute', top: '10px', right: '10px', padding: '4px 10px',
                         borderRadius: theme.radii.full,
-                        background: auction.reserveMet ? 'rgba(20,241,149,0.1)' : 'rgba(239,68,68,0.1)',
-                        border: `1px solid ${auction.reserveMet ? 'rgba(20,241,149,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                        background: auction.reserveMet ? 'rgba(20,241,149,0.15)' : 'rgba(239,68,68,0.15)',
+                        border: `1px solid ${auction.reserveMet ? 'rgba(20,241,149,0.3)' : 'rgba(239,68,68,0.3)'}`,
                         fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em',
                         color: auction.reserveMet ? theme.colors.brand.green : theme.colors.status.error,
+                        backdropFilter: 'blur(8px)',
                     }}>
                         {auction.reserveMet ? 'RESERVE MET' : 'RESERVE NOT MET'}
                     </div>
@@ -253,8 +330,16 @@ function EnglishAuctionCard({ auction, index, currentBlock, onBid }: { readonly 
                 <div style={{ padding: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <div style={{ fontSize: '12px', color: theme.colors.brand.orange, fontWeight: 500 }}>{auction.collection}</div>
-                            <h3 style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, marginTop: '4px' }}>{auction.name}</h3>
+                            <Link to={`/collection/${auction.collectionSlug}`} style={{ textDecoration: 'none' }}>
+                                <div style={{ fontSize: '12px', color: theme.colors.brand.orange, fontWeight: 500, cursor: 'pointer' }}>
+                                    {collectionName}
+                                </div>
+                            </Link>
+                            <Link to={`/nft/${auction.collectionSlug}/${auction.tokenId}`} style={{ textDecoration: 'none' }}>
+                                <h3 style={{ fontFamily: theme.fonts.heading, fontSize: '18px', fontWeight: 700, marginTop: '4px', color: theme.colors.text.primary, cursor: 'pointer' }}>
+                                    {collectionName} #{auction.tokenId}
+                                </h3>
+                            </Link>
                         </div>
                         <div style={{ textAlign: 'right', fontSize: '12px', color: theme.colors.text.tertiary, fontFamily: theme.fonts.mono }}>
                             {auction.bidCount} bids
@@ -268,10 +353,10 @@ function EnglishAuctionCard({ auction, index, currentBlock, onBid }: { readonly 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: theme.spacing.sm }}>
                             <div>
                                 <div style={{ fontSize: '10px', color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: theme.letterSpacing.wider, fontWeight: 600 }}>
-                                    Current Bid
+                                    {auction.currentBid > 0 ? 'Current Bid' : 'Starting Price'}
                                 </div>
                                 <div style={{ fontFamily: theme.fonts.heading, fontSize: '24px', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                                    {auction.currentBid} <span style={{ fontSize: '12px', color: theme.colors.text.secondary }}>BTC</span>
+                                    {auction.currentBid > 0 ? auction.currentBid.toFixed(4) : auction.startPrice.toFixed(4)} <span style={{ fontSize: '12px', color: theme.colors.text.secondary }}>BTC</span>
                                 </div>
                             </div>
                             <BlockCountdown blocksRemaining={remaining} />
@@ -279,18 +364,52 @@ function EnglishAuctionCard({ auction, index, currentBlock, onBid }: { readonly 
                     </div>
 
                     {remaining > 0 && (
-                        <div style={{ display: 'flex', gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
-                            <input
-                                type="number" placeholder={`Min: ${minBid.toFixed(4)}`} value={bidAmount}
-                                onChange={(e) => setBidAmount(e.target.value)} step={0.01}
-                                style={{
-                                    flex: 1, padding: '10px 14px', background: theme.colors.bg.base,
-                                    border: `1px solid ${theme.colors.border.subtle}`, borderRadius: theme.radii.md,
-                                    color: theme.colors.text.primary, fontFamily: theme.fonts.mono, fontSize: '14px',
-                                    outline: 'none', fontVariantNumeric: 'tabular-nums',
-                                }}
-                            />
-                            <Button disabled={!bidAmount || parseFloat(bidAmount) < minBid} onClick={() => onBid?.(BigInt(auction.id), BigInt(Math.round(parseFloat(bidAmount) * 1e8)))}>Place Bid</Button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.xs, marginTop: theme.spacing.md }}>
+                            <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+                                <input
+                                    type="number" placeholder={`Min: ${minBid.toFixed(4)} BTC`} value={bidAmount}
+                                    onChange={(e) => { setBidAmount(e.target.value); setBidError(null); }} step={0.0001}
+                                    style={{
+                                        flex: 1, padding: '10px 14px', background: theme.colors.bg.base,
+                                        border: `1px solid ${bidError ? 'rgba(255,59,48,0.4)' : theme.colors.border.subtle}`, borderRadius: theme.radii.md,
+                                        color: theme.colors.text.primary, fontFamily: theme.fonts.mono, fontSize: '14px',
+                                        outline: 'none', fontVariantNumeric: 'tabular-nums',
+                                    }}
+                                />
+                                <Button
+                                    disabled={!bidAmount || parseFloat(bidAmount) < minBid || isBidding}
+                                    loading={isBidding}
+                                    onClick={async () => {
+                                        setBidError(null);
+                                        setIsBidding(true);
+                                        try {
+                                            const auctionId = BigInt(auction.id);
+                                            const amountSats = BigInt(Math.round(parseFloat(bidAmount) * 1e8));
+                                            await onBid?.(auctionId, amountSats);
+                                            setBidAmount('');
+                                        } catch (err) {
+                                            console.error('[FORGE][bid] Error:', err);
+                                            setBidError(err instanceof Error ? err.message : String(err));
+                                        } finally {
+                                            setIsBidding(false);
+                                        }
+                                    }}
+                                >
+                                    Place Bid
+                                </Button>
+                            </div>
+                            {bidError && (
+                                <div style={{
+                                    padding: '8px 12px',
+                                    borderRadius: theme.radii.sm,
+                                    background: 'rgba(255,59,48,0.06)',
+                                    border: '1px solid rgba(255,59,48,0.15)',
+                                    fontSize: '12px',
+                                    color: theme.colors.status.error,
+                                }}>
+                                    {bidError}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -331,6 +450,8 @@ function EnglishAuctionCard({ auction, index, currentBlock, onBid }: { readonly 
 
 export function AuctionPage(): JSX.Element {
     const { network } = useNetwork();
+    const navigate = useNavigate();
+    const { address: walletAddr } = useWalletConnect();
     const { data: auctionStats } = useAuctionStats(network);
     const { data: realAuctions } = useAllAuctions(network);
     const { blockNumber: currentBlock } = useBlockNumber({ network });
@@ -383,7 +504,7 @@ export function AuctionPage(): JSX.Element {
         const isDutch = a.auctionType === 1n;
 
         return {
-            id: `auction-${a.id.toString()}`,
+            id: a.id.toString(),
             name: `Auction #${a.id.toString()}`,
             collection: `${String(a.collection).slice(0, 6)}...${String(a.collection).slice(-4)}`,
             collectionSlug: String(a.collection),
@@ -391,12 +512,14 @@ export function AuctionPage(): JSX.Element {
             type: isDutch ? 'dutch' as const : 'english' as const,
             startBlock: Number(a.startBlock),
             endBlock: Number(a.endBlock),
+            startPrice,
             currentBid: Number(a.highestBid) / 1e8,
             reservePrice: Number(a.reservePrice) / 1e8,
             reserveMet: a.highestBid >= a.reservePrice,
             bidCount: Number(a.bidCount),
             bids: bidsMap.get(a.id.toString()) ?? [],
             seller: a.seller ? `${a.seller.slice(0, 8)}...${a.seller.slice(-4)}` : '',
+            sellerFull: a.seller ? String(a.seller) : '',
             antiSnipeBlocks: ANTI_SNIPE_BLOCKS,
             antiSnipeExtension: ANTI_SNIPE_BLOCKS,
             wasExtended: false, // TODO: track in indexer when anti-snipe extends an auction
@@ -435,6 +558,47 @@ export function AuctionPage(): JSX.Element {
                 </p>
             </motion.div>
 
+            {/* Create Auction CTA */}
+            <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05, duration: 0.35 }}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '16px 24px',
+                    background: 'linear-gradient(135deg, rgba(255,107,0,0.06) 0%, rgba(153,69,255,0.06) 100%)',
+                    border: `1px solid rgba(255, 107, 0, 0.15)`,
+                    borderRadius: theme.radii.lg,
+                    marginBottom: theme.spacing.xl,
+                    gap: theme.spacing.md,
+                    flexWrap: 'wrap',
+                }}
+            >
+                <div>
+                    <div style={{ fontWeight: 600, fontSize: theme.fontSize.base, color: theme.colors.text.primary, marginBottom: '4px' }}>
+                        Want to auction your NFT?
+                    </div>
+                    <div style={{ fontSize: theme.fontSize.sm, color: theme.colors.text.secondary }}>
+                        Go to any NFT you own and click &quot;Create Auction&quot; to start an English or Dutch auction.
+                    </div>
+                </div>
+                <Button
+                    size="md"
+                    onClick={() => {
+                        if (walletAddr) {
+                            navigate('/profile');
+                        } else {
+                            // If not connected, go to profile which will show connect prompt
+                            navigate('/profile');
+                        }
+                    }}
+                >
+                    {walletAddr ? 'View My NFTs' : 'Connect Wallet'}
+                </Button>
+            </motion.div>
+
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -467,7 +631,10 @@ export function AuctionPage(): JSX.Element {
                             }}>
                                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>&#9201;</div>
                                 <p style={{ color: theme.colors.text.secondary, margin: 0, fontSize: theme.fontSize.base }}>
-                                    No English auctions live right now. Check back soon or create one from your NFT.
+                                    No English auctions live right now.
+                                </p>
+                                <p style={{ color: theme.colors.text.tertiary, margin: '8px 0 0', fontSize: theme.fontSize.sm }}>
+                                    Own an NFT? Go to its detail page and click &quot;Create Auction&quot; to start one.
                                 </p>
                             </div>
                         ) : (
@@ -494,7 +661,10 @@ export function AuctionPage(): JSX.Element {
                             }}>
                                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>&#128202;</div>
                                 <p style={{ color: theme.colors.text.secondary, margin: 0, fontSize: theme.fontSize.base }}>
-                                    No Dutch auctions live right now. Dutch auctions start high and decrease over time.
+                                    No Dutch auctions live right now.
+                                </p>
+                                <p style={{ color: theme.colors.text.tertiary, margin: '8px 0 0', fontSize: theme.fontSize.sm }}>
+                                    Dutch auctions start at a high price and decrease over time. Create one from any NFT you own.
                                 </p>
                             </div>
                         ) : (

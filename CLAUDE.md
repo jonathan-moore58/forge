@@ -56,10 +56,10 @@ The frontend uses **two data sources**:
 |----------|------|-------------|-----------------|
 | CollectionTemplate | `index-collection.ts` | `build/CollectionTemplate.wasm` | `opt1sqpg6vk03dcnur3d7c2fqgrfuk7tp4xuvkqufgwz9` |
 | NFTFactory | `index-factory.ts` | `build/NFTFactory.wasm` | `opt1sqr6sqjc0rgwcwtxschks7cmau0ya54tz5vhccaun` |
-| Marketplace | `index-marketplace.ts` | `build/Marketplace.wasm` | `opt1sqq8x875zqazhweu6r7pc22lvvnwxhk20c5whk03r` |
-| AuctionHouse | `index-auction.ts` | `build/AuctionHouse.wasm` | `opt1sqpexw2p3a3px35avmx6e8xu8gsvz02cg3yt28c5k` |
-| StakingRewards | `index-staking.ts` | `build/StakingRewards.wasm` | `opt1sqrnqrnxwcyg6ge6f6j2efhmsjfg6xa7u6yyhs6rz` |
-| NFTLending | `index-lending.ts` | `build/NFTLending.wasm` | `opt1sqrfym85ey6mzukcqp8qk3kmk6wsu9w900uwvzark` |
+| Marketplace | `index-marketplace.ts` | `build/Marketplace.wasm` | `opt1sqpj37ym9rx7ud0spwgpf68mwpmxs8dpgxu204jek` |
+| AuctionHouse | `index-auction.ts` | `build/AuctionHouse.wasm` | `opt1sqqvah7sfn8snf7cj0rypzgxnwxklt6dv3sdghxff` |
+| StakingRewards | `index-staking.ts` | `build/StakingRewards.wasm` | `opt1sqzqqmlxlq5tmmrs933905dxuu93l604s2skqgq6d` |
+| NFTLending | `index-lending.ts` | `build/NFTLending.wasm` | `opt1sqpvakn6n4s3y3ejx3sjpudxu39jgngw6pslu7f3x` |
 | CollectionRegistry | `index-registry.ts` | `build/CollectionRegistry.wasm` | (not deployed, indexer replaces it) |
 
 ### Factory Cloning Pattern (v7)
@@ -156,9 +156,9 @@ DB_PATH=./forge-indexer.db
 START_BLOCK=0
 POLL_INTERVAL_MS=30000
 FACTORY_ADDRESS=opt1sqr6sqjc0rgwcwtxschks7cmau0ya54tz5vhccaun
-MARKETPLACE_ADDRESS=opt1sqq8x875zqazhweu6r7pc22lvvnwxhk20c5whk03r
-AUCTION_HOUSE_ADDRESS=opt1sqpexw2p3a3px35avmx6e8xu8gsvz02cg3yt28c5k
-STAKING_ADDRESS=opt1sqrnqrnxwcyg6ge6f6j2efhmsjfg6xa7u6yyhs6rz
+MARKETPLACE_ADDRESS=opt1sqpj37ym9rx7ud0spwgpf68mwpmxs8dpgxu204jek
+AUCTION_HOUSE_ADDRESS=opt1sqqvah7sfn8snf7cj0rypzgxnwxklt6dv3sdghxff
+STAKING_ADDRESS=opt1sqzqqmlxlq5tmmrs933905dxuu93l604s2skqgq6d
 ```
 
 ---
@@ -187,10 +187,10 @@ STAKING_ADDRESS=opt1sqrnqrnxwcyg6ge6f6j2efhmsjfg6xa7u6yyhs6rz
 API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3420';
 
 CONTRACT_ADDRESSES.testnet = {
-    factory: 'opt1sqr6sqjc0rgwcwtxschks7cmau0ya54tz5vhccaun',
-    marketplace: 'opt1sqq8x875zqazhweu6r7pc22lvvnwxhk20c5whk03r',
-    auctionHouse: 'opt1sqpexw2p3a3px35avmx6e8xu8gsvz02cg3yt28c5k',
-    staking: 'opt1sqrnqrnxwcyg6ge6f6j2efhmsjfg6xa7u6yyhs6rz',
+    factory: 'opt1sqqewmpmd2vwg67fflwdmu202nwhajrqw2yd9esez',
+    marketplace: 'opt1sqpj37ym9rx7ud0spwgpf68mwpmxs8dpgxu204jek',
+    auctionHouse: 'opt1sqqvah7sfn8snf7cj0rypzgxnwxklt6dv3sdghxff',
+    staking: 'opt1sqzqqmlxlq5tmmrs933905dxuu93l604s2skqgq6d',
 };
 ```
 

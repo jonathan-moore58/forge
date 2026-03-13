@@ -18,6 +18,7 @@ import { useMarketStats } from '@/hooks/useMarketplace';
 import { IndexerAPI } from '@/services/IndexerAPI';
 import { useCollectionActions } from '@/hooks/useCollectionActions';
 import { useMint } from '@/hooks/useMint';
+import { useTotalSupply } from '@/hooks/useCollectionData';
 import { CollectionImage } from '@/components/common/CollectionImage';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { bech32m } from 'bech32';
@@ -522,7 +523,12 @@ function DropCard({ drop, index, currentBlock }: { readonly drop: Drop; readonly
         network,
         invalidateKeys: [['launchpad', 'drops', network]],
     });
-    const isSoldOut = drop.supply > 0 && drop.minted >= drop.supply;
+
+    // On-chain totalSupply for real-time mint count (overrides indexer's stale value)
+    const { data: onChainSupply } = useTotalSupply(network, drop.address);
+    const minted = onChainSupply !== undefined ? Number(onChainSupply) : drop.minted;
+
+    const isSoldOut = drop.supply > 0 && minted >= drop.supply;
     const isLive = drop.status === 'live' && !isSoldOut;
     const isUpcoming = drop.status === 'upcoming';
     const hasStartBlock = drop.startBlock > 0;
@@ -692,7 +698,7 @@ function DropCard({ drop, index, currentBlock }: { readonly drop: Drop; readonly
                         {drop.description}
                     </p>
 
-                    <MintProgressBar minted={drop.minted} supply={drop.supply} />
+                    <MintProgressBar minted={minted} supply={drop.supply} />
 
                     {/* Active phase info */}
                     {activePhase && (
@@ -881,6 +887,11 @@ function FeaturedDrop({ drop, currentBlock }: { readonly drop: Drop; readonly cu
         network,
         invalidateKeys: [['launchpad', 'drops', network]],
     });
+
+    // On-chain totalSupply for real-time mint count (overrides indexer's stale value)
+    const { data: onChainSupply } = useTotalSupply(network, drop.address);
+    const minted = onChainSupply !== undefined ? Number(onChainSupply) : drop.minted;
+
     const activePhase = drop.phases.find(
         (p) => currentBlock >= p.startBlock && currentBlock < p.endBlock,
     );
@@ -1053,7 +1064,7 @@ function FeaturedDrop({ drop, currentBlock }: { readonly drop: Drop; readonly cu
                             {drop.description}
                         </p>
 
-                        <MintProgressBar minted={drop.minted} supply={drop.supply} large />
+                        <MintProgressBar minted={minted} supply={drop.supply} large />
 
                         {/* Stats row */}
                         <div style={{

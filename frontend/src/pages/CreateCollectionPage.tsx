@@ -409,7 +409,7 @@ function StepReview({ form }: { readonly form: CollectionFormData }): JSX.Elemen
                     color: theme.colors.text.tertiary,
                     fontFamily: theme.fonts.mono,
                 }}>
-                    3-4 transactions
+                    2-3 transactions
                 </div>
             </div>
 
@@ -424,9 +424,9 @@ function StepReview({ form }: { readonly form: CollectionFormData }): JSX.Elemen
                 color: theme.colors.text.secondary,
                 lineHeight: 1.6,
             }}>
-                Deployment requires <strong>3-4 wallet confirmations</strong>. TX1 deploys the contract.
-                TX2 initializes (supply, price, royalties). TX3 sets the collection name and symbol.
-                TX4 sets branding (icon, banner, etc.) — only if you filled in branding fields above.
+                Deployment requires <strong>2-3 wallet confirmations</strong>. TX1 deploys the contract.
+                TX2 initializes everything (name, symbol, supply, price, royalties).
+                TX3 sets branding (icon, banner, etc.) — only if you filled in branding fields above.
             </div>
         </div>
     );
@@ -550,19 +550,19 @@ interface DeployOverlayProps {
 const ALL_DEPLOY_STAGES = [
     { key: 'deploying', label: 'Deploying contract — confirm in wallet...' },
     { key: 'waiting', label: 'Waiting for deploy TX to be mined...' },
-    { key: 'initializing', label: 'Initializing — confirm in wallet...' },
+    { key: 'initializing', label: 'Initializing collection — confirm in wallet...' },
     { key: 'verifying', label: 'Verifying initialization on-chain...' },
-    { key: 'naming', label: 'Setting name — confirm in wallet...' },
     { key: 'branding', label: 'Setting branding — confirm in wallet...' },
     { key: 'confirmed', label: 'Collection deployed!' },
 ] as const;
 
 function DeployOverlay({ status, contractAddress, error, hasBranding, onClose, onRetry, onViewCollection }: DeployOverlayProps) {
-    // Filter stages: skip 'branding' if user didn't fill branding fields
+    // Filter stages: skip optional TXs that user didn't fill
     const stages = useMemo(
-        () => hasBranding
-            ? ALL_DEPLOY_STAGES
-            : ALL_DEPLOY_STAGES.filter((s) => s.key !== 'branding'),
+        () => ALL_DEPLOY_STAGES.filter((s) => {
+            if (s.key === 'branding' && !hasBranding) return false;
+            return true;
+        }),
         [hasBranding],
     );
     const currentStage = stages.findIndex((s) => s.key === status);
@@ -623,7 +623,7 @@ function DeployOverlay({ status, contractAddress, error, hasBranding, onClose, o
                     fontWeight: 700,
                     marginBottom: '8px',
                 }}>
-                    {isComplete ? 'Collection Deployed!' : isError ? 'Deployment Failed' : status === 'waiting' ? 'Waiting for Confirmation...' : status === 'initializing' ? 'Initializing...' : status === 'verifying' ? 'Verifying...' : status === 'naming' ? 'Setting Name...' : status === 'branding' ? 'Setting Branding...' : 'Deploying Collection'}
+                    {isComplete ? 'Collection Deployed!' : isError ? 'Deployment Failed' : status === 'waiting' ? 'Waiting for Confirmation...' : status === 'initializing' ? 'Initializing...' : status === 'verifying' ? 'Verifying...' : status === 'branding' ? 'Setting Branding...' : 'Deploying Collection'}
                 </h3>
                 <p style={{
                     fontSize: '13px',
@@ -640,11 +640,9 @@ function DeployOverlay({ status, contractAddress, error, hasBranding, onClose, o
                                     ? 'Confirm the initialize transaction in your wallet.'
                                     : status === 'verifying'
                                         ? 'Checking that initialization succeeded on-chain...'
-                                        : status === 'naming'
-                                            ? 'Confirm the name/symbol transaction in your wallet.'
-                                            : status === 'branding'
-                                                ? 'Confirm the branding transaction in your wallet.'
-                                                : 'Confirm the deployment transaction in your wallet.'}
+                                        : status === 'branding'
+                                            ? 'Confirm the branding transaction in your wallet.'
+                                            : 'Confirm the deployment transaction in your wallet.'}
                 </p>
 
                 {/* Stage progress */}

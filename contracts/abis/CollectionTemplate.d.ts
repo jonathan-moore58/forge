@@ -80,6 +80,11 @@ export type SetMintOpen = CallResult<
 >;
 
 /**
+ * @description Represents the result of the changeMetadata function call.
+ */
+export type ChangeMetadata = CallResult<{}, OPNetEvent<never>[]>;
+
+/**
  * @description Represents the result of the setMintPrice function call.
  */
 export type SetMintPrice = CallResult<
@@ -155,6 +160,8 @@ export type IsInitialized = CallResult<
 // ------------------------------------------------------------------
 export interface ICollectionTemplate extends IOP_NETContract {
     initialize(
+        name: string,
+        symbol: string,
         maxSupply: bigint,
         mintPrice: bigint,
         royaltyBps: bigint,
@@ -165,6 +172,7 @@ export interface ICollectionTemplate extends IOP_NETContract {
     airdrop(recipient: Address, quantity: bigint): Promise<Airdrop>;
     setSalePhase(phase: bigint): Promise<SetSalePhase>;
     setMintOpen(open: boolean): Promise<SetMintOpen>;
+    changeMetadata(icon: string, banner: string, description: string, website: string): Promise<ChangeMetadata>;
     setMintPrice(price: bigint): Promise<SetMintPrice>;
     collectionOwner(): Promise<CollectionOwner>;
     currentPrice(): Promise<CurrentPrice>;

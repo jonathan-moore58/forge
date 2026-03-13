@@ -23,6 +23,8 @@ export const CollectionTemplateAbi = [
     {
         name: 'initialize',
         inputs: [
+            { name: 'name', type: ABIDataTypes.STRING },
+            { name: 'symbol', type: ABIDataTypes.STRING },
             { name: 'maxSupply', type: ABIDataTypes.UINT256 },
             { name: 'mintPrice', type: ABIDataTypes.UINT256 },
             { name: 'royaltyBps', type: ABIDataTypes.UINT256 },
@@ -66,6 +68,17 @@ export const CollectionTemplateAbi = [
         name: 'setMintOpen',
         inputs: [{ name: 'open', type: ABIDataTypes.BOOL }],
         outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'changeMetadata',
+        inputs: [
+            { name: 'icon', type: ABIDataTypes.STRING },
+            { name: 'banner', type: ABIDataTypes.STRING },
+            { name: 'description', type: ABIDataTypes.STRING },
+            { name: 'website', type: ABIDataTypes.STRING },
+        ],
+        outputs: [],
         type: BitcoinAbiTypes.Function,
     },
     {

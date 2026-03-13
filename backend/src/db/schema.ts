@@ -246,6 +246,22 @@ export function initSchema(db?: DatabaseSync): void {
         // Column already exists — ignore
     }
 
+    // Dedup: contract_hex stores the canonical 32-byte contract public key hex.
+    // Both the indexer (hex) and the enrichCollection endpoint (bech32m) resolve
+    // to the same hex. A UNIQUE index on this column prevents duplicate rows.
+    try {
+        conn.exec('ALTER TABLE collections ADD COLUMN contract_hex TEXT');
+        log.info('Migration: added contract_hex column');
+    } catch {
+        // Column already exists — ignore
+    }
+    try {
+        conn.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_contract_hex ON collections(contract_hex) WHERE contract_hex IS NOT NULL');
+        log.info('Migration: added contract_hex unique index');
+    } catch {
+        // Index already exists — ignore
+    }
+
     // Execute index creation (after migrations so new columns are available)
     for (const stmt of INDEXES.split(';')) {
         const trimmed = stmt.trim();

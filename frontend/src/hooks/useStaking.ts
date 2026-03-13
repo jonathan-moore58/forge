@@ -5,9 +5,9 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { Address } from '@btc-vision/transaction';
 import { ContractService } from '@/services/ContractService';
 import { CONTRACT_ADDRESSES, type ForgeNetwork } from '@/config/contracts';
+import { resolveAddress } from '@/utils/address';
 import type { PoolData, UserStakeData, StakingStatsData } from '@/contracts/abis';
 
 /* ------------------------------------------------------------------ */
@@ -70,15 +70,15 @@ export function usePool(network: ForgeNetwork, poolId: bigint | undefined) {
 
 /**
  * Get a user's stake info for a specific pool.
- * Returns stakedCount, pendingRewards, lockEndBlock, multiplierBps.
+ * Returns stakedCount, pendingRewards, lockEndBlock, multiplier.
  */
 export function useUserStake(network: ForgeNetwork, poolId: bigint | undefined, user: string | undefined) {
     return useQuery({
         queryKey: stakingKeys.userStake(network, poolId?.toString() ?? '', user ?? ''),
         queryFn: async (): Promise<UserStakeData> => {
             const staking = ContractService.getStaking(network);
-            const userAddr = Address.fromString(user!);
-            const result = await staking.getUserStakeInfo(poolId!, userAddr);
+            const userAddr = await resolveAddress(user!, network);
+            const result = await staking.getUserStakeInfo(userAddr, poolId!);
             return result.properties;
         },
         enabled: isStakingDeployed(network) && poolId !== undefined && !!user,
@@ -95,7 +95,8 @@ export interface PoolWithId extends PoolData {
 }
 
 /**
- * Fetch all staking pools by iterating from ID 0 to totalPools.
+ * Fetch all staking pools by iterating from ID 1 to totalPools.
+ * Pool IDs are 1-based (_nextPoolId starts at 1 in the contract).
  */
 export function useAllPools(network: ForgeNetwork) {
     return useQuery({
@@ -109,7 +110,8 @@ export function useAllPools(network: ForgeNetwork) {
 
             const pools: PoolWithId[] = [];
 
-            for (let i = 0n; i < total; i++) {
+            // Pool IDs are 1-based (contract._nextPoolId starts at 1)
+            for (let i = 1n; i <= total; i++) {
                 try {
                     const result = await staking.getPool(i);
                     pools.push({ ...result.properties, id: i });

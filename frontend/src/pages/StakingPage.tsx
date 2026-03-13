@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Address } from '@btc-vision/transaction';
+import { resolveAddress } from '@/utils/address';
 import { theme } from '@/styles/theme';
 import { GlassCard } from '@/components/common/GlassCard';
 import { Button } from '@/components/common/Button';
@@ -42,7 +42,7 @@ interface UserStakeInfo {
     readonly stakedCount: bigint;
     readonly pendingRewards: bigint;
     readonly lockEndBlock: bigint;
-    readonly multiplierBps: bigint;
+    readonly multiplier: bigint;
 }
 
 type StakeStep = 'select' | 'approve' | 'confirm' | 'success';
@@ -69,8 +69,9 @@ function shortenAddr(addr: string): string {
     return `${addr.slice(0, 8)}...${addr.slice(-4)}`;
 }
 
-function satsToBtcDisplay(sats: bigint): string {
-    const val = Number(sats) / 1e8;
+/** Format a raw token amount (8-decimal precision) for display */
+function formatTokenAmount(raw: bigint): string {
+    const val = Number(raw) / 1e8;
     if (val === 0) return '0';
     if (val < 0.0001) return val.toFixed(8);
     if (val < 1) return val.toFixed(6);
@@ -200,7 +201,7 @@ function PoolCard({
                     marginBottom: '16px',
                 }}>
                     {[
-                        { label: 'Reward Rate', value: `${pool.rewardPerBlock.toFixed(6)} BTC/blk` },
+                        { label: 'Reward Rate', value: `${pool.rewardPerBlock.toFixed(6)} /blk` },
                         { label: 'Total Staked', value: `${pool.totalStaked} NFTs` },
                         { label: 'Time Left', value: hasEnded ? 'Ended' : timeRemaining || 'Calculating...' },
                         { label: 'Reward Token', value: pool.rewardToken },
@@ -296,11 +297,11 @@ function UserStakeSummary({
         queryKey: ['userStakesSummary', network, walletAddress, pools.map(p => p.poolId.toString()).join(',')],
         queryFn: async (): Promise<UserStakeInfo[]> => {
             const staking = ContractService.getStaking(network);
-            const userAddr = Address.fromString(walletAddress);
+            const userAddr = await resolveAddress(walletAddress, network);
             const results: UserStakeInfo[] = [];
             for (const pool of pools) {
                 try {
-                    const result = await staking.getUserStakeInfo(pool.poolId, userAddr);
+                    const result = await staking.getUserStakeInfo(userAddr, pool.poolId);
                     const props = result.properties;
                     if (props.stakedCount > 0n) {
                         results.push({
@@ -309,7 +310,7 @@ function UserStakeSummary({
                             stakedCount: props.stakedCount,
                             pendingRewards: props.pendingRewards,
                             lockEndBlock: props.lockEndBlock,
-                            multiplierBps: props.multiplierBps,
+                            multiplier: props.multiplier,
                         });
                     }
                 } catch {
@@ -362,7 +363,7 @@ function UserStakeSummary({
                 }}>
                     {[
                         { label: 'Your Staked NFTs', value: String(totalStaked), color: theme.colors.text.primary },
-                        { label: 'Pending Rewards', value: `${satsToBtcDisplay(totalPending)} BTC`, color: theme.colors.brand.green },
+                        { label: 'Pending Rewards', value: `${formatTokenAmount(totalPending)} tokens`, color: theme.colors.brand.green },
                         { label: 'Active In', value: `${poolsIn} pool${poolsIn !== 1 ? 's' : ''}`, color: theme.colors.brand.cyan },
                     ].map(({ label, value, color }) => (
                         <div key={label} style={{ textAlign: 'center' }}>
@@ -392,7 +393,7 @@ function UserStakeSummary({
                     const isLocked = currentBlock !== null && currentBlock < stake.lockEndBlock;
                     const remaining = currentBlock ? blocksRemaining(currentBlock, stake.lockEndBlock) : null;
                     const lockTimeStr = estimateTimeRemaining(remaining);
-                    const multiplier = (Number(stake.multiplierBps) / 10000).toFixed(2);
+                    const multiplier = (Number(stake.multiplier) / 10000).toFixed(2);
 
                     return (
                         <motion.div
@@ -455,7 +456,7 @@ function UserStakeSummary({
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '10px', fontWeight: 600, color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Pending Rewards</div>
-                                            <div style={{ fontSize: '18px', fontWeight: 700, color: theme.colors.brand.green, fontFamily: theme.fonts.mono }}>{satsToBtcDisplay(stake.pendingRewards)}</div>
+                                            <div style={{ fontSize: '18px', fontWeight: 700, color: theme.colors.brand.green, fontFamily: theme.fonts.mono }}>{formatTokenAmount(stake.pendingRewards)}</div>
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '10px', fontWeight: 600, color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Reward Rate</div>
@@ -483,6 +484,26 @@ function UserStakeSummary({
                                             Unstake
                                         </Button>
                                     </div>
+                                    {/* Error display */}
+                                    {stakingActions.error && (
+                                        <div style={{
+                                            marginTop: '10px',
+                                            padding: '8px 12px',
+                                            borderRadius: theme.radii.sm,
+                                            background: 'rgba(255,59,48,0.08)',
+                                            border: '1px solid rgba(255,59,48,0.2)',
+                                            fontSize: '12px',
+                                            color: theme.colors.status.error,
+                                            lineHeight: 1.4,
+                                        }}>
+                                            {stakingActions.error}
+                                            {/rejected by the contract/i.test(stakingActions.error) && (
+                                                <div style={{ marginTop: '4px', color: theme.colors.text.tertiary, fontSize: '11px' }}>
+                                                    Tip: Claims fail if the StakingRewards contract has not been funded with reward tokens.
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </GlassCard>
                         </motion.div>
@@ -559,7 +580,6 @@ function StakeModal({
             try {
                 await stakingActions.stake(
                     pool.poolId,
-                    pool.collectionAddress,
                     selectedTokenId,
                     lockDuration,
                 );
@@ -902,8 +922,8 @@ function UnstakeModal({
         queryKey: ['unstakeCheck', network, pool?.poolId.toString(), walletAddress],
         queryFn: async () => {
             const staking = ContractService.getStaking(network);
-            const userAddr = Address.fromString(walletAddress);
-            const result = await staking.getUserStakeInfo(pool!.poolId, userAddr);
+            const userAddr = await resolveAddress(walletAddress, network);
+            const result = await staking.getUserStakeInfo(userAddr, pool!.poolId);
             return result.properties;
         },
         enabled: isOpen && !!pool && !!walletAddress,
@@ -924,7 +944,7 @@ function UnstakeModal({
         if (!pool || !selectedTokenId) return;
         setError(null);
         try {
-            await stakingActions.unstake(pool.poolId, pool.collectionAddress, BigInt(selectedTokenId));
+            await stakingActions.unstake(pool.poolId, BigInt(selectedTokenId));
             setSuccess(true);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Unstake failed');
@@ -1027,7 +1047,7 @@ function UnstakeModal({
                                     fontSize: '13px',
                                     color: theme.colors.brand.green,
                                 }}>
-                                    Unstaking will also claim <strong>{satsToBtcDisplay(userStake.pendingRewards)} BTC</strong> in pending rewards.
+                                    Unstaking will also claim <strong>{formatTokenAmount(userStake.pendingRewards)} tokens</strong> in pending rewards.
                                 </div>
                             )}
 
@@ -1245,7 +1265,7 @@ function AdminPanel({
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                             <div>
-                                <label style={labelStyle}>Reward/Block (BTC)</label>
+                                <label style={labelStyle}>Reward/Block (tokens)</label>
                                 <input style={inputStyle} value={cpRewardPerBlock} onChange={(e) => setCpRewardPerBlock(e.target.value)} placeholder="0.001" />
                             </div>
                             <div>
@@ -1257,6 +1277,120 @@ function AdminPanel({
                                 <input style={inputStyle} value={cpEndBlock} onChange={(e) => setCpEndBlock(e.target.value)} placeholder="auto (+4320)" />
                             </div>
                         </div>
+
+                        {/* Duration presets */}
+                        <div>
+                            <label style={labelStyle}>Duration Presets</label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                {[
+                                    { label: '1 day', blocks: 144 },
+                                    { label: '1 week', blocks: 1008 },
+                                    { label: '1 month', blocks: 4320 },
+                                    { label: '3 months', blocks: 12960 },
+                                ].map((preset) => {
+                                    const start = cpStartBlock ? Number(cpStartBlock) : (currentBlock ? Number(currentBlock) + 10 : 0);
+                                    const isActive = cpEndBlock === String(start + preset.blocks);
+                                    return (
+                                        <button
+                                            key={preset.label}
+                                            onClick={() => {
+                                                const s = cpStartBlock ? Number(cpStartBlock) : (currentBlock ? Number(currentBlock) + 10 : 10);
+                                                if (!cpStartBlock && currentBlock) setCpStartBlock(String(Number(currentBlock) + 10));
+                                                setCpEndBlock(String(s + preset.blocks));
+                                            }}
+                                            style={{
+                                                flex: 1,
+                                                padding: '8px',
+                                                background: isActive ? 'rgba(255,107,0,0.1)' : theme.colors.bg.overlay,
+                                                border: `1px solid ${isActive ? 'rgba(255,107,0,0.3)' : theme.colors.border.subtle}`,
+                                                borderRadius: theme.radii.sm,
+                                                color: isActive ? theme.colors.brand.orange : theme.colors.text.secondary,
+                                                cursor: 'pointer',
+                                                fontSize: '12px',
+                                                fontWeight: 600,
+                                                fontFamily: theme.fonts.mono,
+                                            }}
+                                        >
+                                            {preset.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Funding calculator */}
+                        {(() => {
+                            const rpb = parseFloat(cpRewardPerBlock || '0');
+                            const startBlock = cpStartBlock ? Number(cpStartBlock) : (currentBlock ? Number(currentBlock) + 10 : 0);
+                            const endBlock = cpEndBlock ? Number(cpEndBlock) : startBlock + 4320;
+                            const durationBlocks = Math.max(0, endBlock - startBlock);
+                            const totalTokens = rpb * durationBlocks;
+                            const durationDays = Math.round((durationBlocks * 10) / 60 / 24 * 10) / 10;
+
+                            if (rpb <= 0 || durationBlocks <= 0) return null;
+
+                            return (
+                                <div style={{
+                                    padding: '14px 16px',
+                                    borderRadius: theme.radii.md,
+                                    background: 'rgba(0,209,140,0.04)',
+                                    border: '1px solid rgba(0,209,140,0.12)',
+                                }}>
+                                    <div style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.06em',
+                                        color: theme.colors.brand.green,
+                                        marginBottom: '10px',
+                                    }}>
+                                        Funding Required
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ color: theme.colors.text.secondary }}>Duration</span>
+                                            <span style={{ color: theme.colors.text.primary, fontFamily: theme.fonts.mono, fontWeight: 600 }}>
+                                                {durationBlocks.toLocaleString()} blocks (~{durationDays}d)
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ color: theme.colors.text.secondary }}>Reward per block</span>
+                                            <span style={{ color: theme.colors.text.primary, fontFamily: theme.fonts.mono, fontWeight: 600 }}>
+                                                {rpb}
+                                            </span>
+                                        </div>
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            paddingTop: '8px',
+                                            borderTop: `1px solid rgba(0,209,140,0.12)`,
+                                        }}>
+                                            <span style={{ color: theme.colors.text.primary, fontWeight: 600 }}>Total tokens needed</span>
+                                            <span style={{
+                                                color: theme.colors.brand.green,
+                                                fontFamily: theme.fonts.mono,
+                                                fontWeight: 700,
+                                                fontSize: '15px',
+                                            }}>
+                                                {totalTokens < 1 ? totalTokens.toFixed(8) : totalTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        marginTop: '10px',
+                                        fontSize: '11px',
+                                        color: theme.colors.text.tertiary,
+                                        lineHeight: 1.5,
+                                    }}>
+                                        Transfer this amount of the reward token to the StakingRewards contract
+                                        (<span style={{ fontFamily: theme.fonts.mono, fontSize: '10px' }}>
+                                            {CONTRACT_ADDRESSES[network].staking?.slice(0, 16)}...
+                                        </span>) before users stake. If underfunded, claims and unstakes will fail.
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         <Button variant="primary" size="md" onClick={handleCreatePool} loading={stakingActions.isPending} disabled={!cpCollection || !cpRewardToken || !cpRewardPerBlock}>
                             Create Pool
                         </Button>
@@ -1320,8 +1454,8 @@ function AdminPanel({
 
 export function StakingPage(): JSX.Element {
     const { network } = useNetwork();
-    const { address: rawAddr } = useWalletConnect();
-    const walletAddress = rawAddr ? String(rawAddr) : undefined;
+    const { walletAddress: rawAddr } = useWalletConnect();
+    const walletAddress = rawAddr ? (typeof rawAddr === 'string' ? rawAddr : String(rawAddr)) : undefined;
     const { blockNumber: currentBlock } = useBlockNumber({ network });
 
     // Pool data
@@ -1441,7 +1575,7 @@ export function StakingPage(): JSX.Element {
                 <StatCard label="Total Pools" value={totalPools} decimals={0} icon="🏊" />
                 <StatCard label="Active Pools" value={activePools} decimals={0} icon="🟢" />
                 <StatCard label="NFTs Staked" value={totalNFTsStaked} decimals={0} icon="🔒" />
-                <StatCard label="Rewards Distributed" value={totalRewardsDistributed} decimals={4} suffix=" BTC" icon="💰" />
+                <StatCard label="Rewards Distributed" value={totalRewardsDistributed} decimals={4} suffix=" tokens" icon="💰" />
             </motion.div>
 
             {/* Tab Bar */}

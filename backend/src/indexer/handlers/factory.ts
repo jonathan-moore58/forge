@@ -12,8 +12,8 @@ export function createFactoryHandler(db: DatabaseSync) {
     // ── Prepared statements ──
     const insertCollection = db.prepare(`
         INSERT OR IGNORE INTO collections
-            (collection_address, collection_id, creator, created_at_block)
-        VALUES (@collectionAddress, @collectionId, @creator, @blockNumber)
+            (collection_address, collection_id, creator, created_at_block, contract_hex)
+        VALUES (@collectionAddress, @collectionId, @creator, @blockNumber, @contractHex)
     `);
 
     const updateVerified = db.prepare(`
@@ -37,6 +37,7 @@ export function createFactoryHandler(db: DatabaseSync) {
             blockNumber: number,
             txHash: string,
             logIndex: number,
+            contractHex?: string,
         ): string {
             const creator = normalizeAddress(params['creator'] as string);
             const collectionId = Number(params['collectionId'] as bigint);
@@ -49,6 +50,7 @@ export function createFactoryHandler(db: DatabaseSync) {
                 collectionId,
                 creator,
                 blockNumber,
+                contractHex: contractHex ?? null,
             });
 
             insertActivity.run({
@@ -77,15 +79,18 @@ export function createFactoryHandler(db: DatabaseSync) {
             blockNumber: number,
             txHash: string,
             logIndex: number,
+            contractHex?: string,
         ): void {
             log.info(`CollectionConfigured → ${collectionAddress} by ${creator} (supply=${maxSupply})`);
 
             // Use collection_id = 0 for directly-deployed collections (not from factory)
+            // contract_hex = canonical 32-byte hex used for UNIQUE dedup
             insertCollection.run({
                 collectionAddress,
                 collectionId: 0,
                 creator,
                 blockNumber,
+                contractHex: contractHex ?? collectionAddress,
             });
 
             insertActivity.run({

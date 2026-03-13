@@ -144,40 +144,36 @@ export function ListingModal({
     return (
         <AnimatePresence>
             {open && (
-                <>
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={handleClose}
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            background: 'rgba(0, 0, 0, 0.7)',
-                            backdropFilter: 'blur(8px)',
-                            zIndex: theme.zIndex.modal,
-                        }}
-                    />
-
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={handleClose}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        backdropFilter: 'blur(8px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: theme.zIndex.modal,
+                    }}
+                >
                     {/* Modal */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        onClick={(e) => e.stopPropagation()}
                         style={{
-                            position: 'fixed',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
                             width: '100%',
                             maxWidth: '440px',
                             background: theme.colors.bg.raised,
                             border: `1px solid ${theme.colors.border.default}`,
                             borderRadius: theme.radii.xl,
                             padding: '32px',
-                            zIndex: theme.zIndex.modal + 1,
                             boxShadow: theme.shadows.xl,
                         }}
                     >
@@ -457,7 +453,7 @@ export function ListingModal({
                             </div>
                         )}
                     </motion.div>
-                </>
+                </motion.div>
             )}
         </AnimatePresence>
     );

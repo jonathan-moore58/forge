@@ -277,7 +277,7 @@ export class StakingRewards extends ReentrancyGuard {
 
         // Interaction: Escrow NFT — transfer from staker to this contract
         const escrowCalldata: BytesWriter = new BytesWriter(SELECTOR_BYTE_LENGTH + 32 + 32 + 32);
-        escrowCalldata.writeSelector(encodeSelector('safeTransferFrom(address,address,uint256)'));
+        escrowCalldata.writeSelector(encodeSelector('transferFrom(address,address,uint256)'));
         escrowCalldata.writeAddress(sender);
         escrowCalldata.writeAddress(Blockchain.contractAddress);
         escrowCalldata.writeU256(tokenId);
@@ -362,7 +362,7 @@ export class StakingRewards extends ReentrancyGuard {
 
         // Interaction: Return NFT from contract to staker
         const returnCalldata: BytesWriter = new BytesWriter(SELECTOR_BYTE_LENGTH + 32 + 32 + 32);
-        returnCalldata.writeSelector(encodeSelector('safeTransferFrom(address,address,uint256)'));
+        returnCalldata.writeSelector(encodeSelector('transferFrom(address,address,uint256)'));
         returnCalldata.writeAddress(Blockchain.contractAddress);
         returnCalldata.writeAddress(sender);
         returnCalldata.writeU256(tokenId);

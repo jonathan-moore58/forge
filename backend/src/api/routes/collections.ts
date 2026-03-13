@@ -3,6 +3,7 @@ import { getDb } from '../../db/connection.js';
 import { parsePagination } from '../../types/api.js';
 import { createLogger } from '../../utils/logger.js';
 import { createMetadataEnricher } from '../../indexer/metadata-enricher.js';
+import { addressToRawHex } from '../../utils/address.js';
 
 const log = createLogger('route:collections');
 
@@ -25,7 +26,8 @@ export function collectionRoutes(): Router {
         }
         if (req.query.creator) {
             conditions.push('creator = @creator');
-            params.creator = req.query.creator as string;
+            // Convert bech32m → hex to match DB format
+            params.creator = addressToRawHex(req.query.creator as string);
         }
         if (req.query.marketplace_registered != null) {
             conditions.push('marketplace_registered = @marketplaceRegistered');
@@ -48,7 +50,15 @@ export function collectionRoutes(): Router {
     /** GET /api/collections/:address */
     router.get('/collections/:address', (req, res) => {
         const db = getDb();
-        const row = db.prepare('SELECT * FROM collections WHERE collection_address = ?').get(req.params.address);
+        const addr = req.params.address;
+        // Try primary key first, then fallback to contract_hex lookup
+        // This handles address format mismatches (hex stored vs bech32m requested, or vice versa)
+        let row = db.prepare('SELECT * FROM collections WHERE collection_address = ?').get(addr);
+        if (!row) {
+            // Try by contract_hex (handles hex input when DB has bech32m, or vice versa)
+            const hexAddr = addr.replace(/^0x/i, '').toLowerCase();
+            row = db.prepare('SELECT * FROM collections WHERE contract_hex = ?').get(hexAddr);
+        }
         if (!row) return res.status(404).json({ error: 'Collection not found' });
         res.json({ data: row });
     });
@@ -76,7 +86,7 @@ export function collectionRoutes(): Router {
      *
      * Body: { address: string, creator: string, txHash?: string }
      */
-    router.post('/collections/register', (req, res) => {
+    router.post('/collections/register', async (req, res) => {
         const db = getDb();
         const { address, creator, txHash } = req.body as {
             address?: string;
@@ -106,15 +116,20 @@ export function collectionRoutes(): Router {
         // Insert with collection_id = -1 (no factory-assigned ID for direct deploys)
         // The metadata enricher will fill in name, symbol, supply, etc.
         try {
+            // Resolve bech32m → hex for contract_hex dedup column
+            const { resolveContractHex: resolveHex } = await import('../../utils/address.js');
+            const regHex = await resolveHex(address);
+
             db.prepare(`
                 INSERT OR IGNORE INTO collections
-                    (collection_address, collection_id, creator, created_at_block)
-                VALUES (@address, @collectionId, @creator, @block)
+                    (collection_address, collection_id, creator, created_at_block, contract_hex)
+                VALUES (@address, @collectionId, @creator, @block, @contractHex)
             `).run({
                 address,
                 collectionId: -1,
                 creator,
                 block: 0, // Will be updated when we see the first event
+                contractHex: regHex || null,
             });
 
             // Also insert an activity record if txHash provided
@@ -151,23 +166,37 @@ export function collectionRoutes(): Router {
         }
 
         try {
-            // Ensure the collection row exists (insert if missing)
-            const existing = db.prepare(
-                'SELECT collection_address FROM collections WHERE collection_address = ?',
-            ).get(address);
+            // Resolve bech32m → hex to check if the event-based row already exists
+            const { resolveContractHex } = await import('../../utils/address.js');
+            const hex = await resolveContractHex(address);
 
-            if (!existing) {
+            // Check for existing row by bech32m OR hex (event processor stores hex)
+            const existing = db.prepare(
+                'SELECT collection_address FROM collections WHERE collection_address = ? OR collection_address = ?',
+            ).get(address, hex ?? '') as { collection_address: string } | undefined;
+
+            if (existing && existing.collection_address !== address && hex) {
+                // Row exists under hex key — update it to bech32m for consistency
+                db.prepare(
+                    'UPDATE collections SET collection_address = ? WHERE collection_address = ?',
+                ).run(address, existing.collection_address);
+                log.info(`Migrated collection key from hex ${existing.collection_address} → bech32m ${address}`);
+            } else if (!existing) {
+                // Insert placeholder with bech32m as primary key + contract_hex for UNIQUE dedup.
+                // If the indexer later inserts with the same contract_hex, it'll be IGNORED
+                // by the UNIQUE constraint — no duplicate rows.
                 db.prepare(`
                     INSERT OR IGNORE INTO collections
-                        (collection_address, collection_id, creator, created_at_block)
-                    VALUES (@address, @collectionId, @creator, @block)
+                        (collection_address, collection_id, creator, created_at_block, contract_hex)
+                    VALUES (@address, @collectionId, @creator, @block, @contractHex)
                 `).run({
                     address,
                     collectionId: -1,
                     creator: creator || '',
                     block: 0,
+                    contractHex: hex || null,
                 });
-                log.info(`Inserted placeholder for ${address} before force-enrich`);
+                log.info(`Inserted placeholder for ${address} (hex=${hex}) before force-enrich`);
             }
 
             // Force-enrich from chain

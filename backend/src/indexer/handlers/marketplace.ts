@@ -50,8 +50,8 @@ export function createMarketplaceHandler(db: DatabaseSync) {
     // ── Collection registration ──
     const insertRegisteredCollection = db.prepare(`
         INSERT OR IGNORE INTO collections
-            (collection_address, collection_id, creator, created_at_block)
-        VALUES (@collectionAddress, @collectionId, @creator, @blockNumber)
+            (collection_address, collection_id, creator, created_at_block, contract_hex)
+        VALUES (@collectionAddress, @collectionId, @creator, @blockNumber, @contractHex)
     `);
 
     const getMaxCollectionId = db.prepare(`
@@ -284,8 +284,11 @@ export function createMarketplaceHandler(db: DatabaseSync) {
             blockNumber: number,
             txHash: string,
             logIndex: number,
+            contractHex?: string,
         ): void {
-            const collectionAddress = normalizeAddress(params['collection'] as string);
+            // params['collection'] is already resolved by receipt-processor
+            // (via hexToBech32m map or DB fallback) — use as-is, don't re-normalize
+            const collectionAddress = params['collection'] as string;
             const creator = normalizeAddress(params['creator'] as string);
 
             // Get next collection ID
@@ -293,7 +296,13 @@ export function createMarketplaceHandler(db: DatabaseSync) {
             const collectionId = (row?.maxId ?? 0) + 1;
 
             log.info(`CollectionRegistered: ${collectionAddress} by ${creator} (id=${collectionId})`);
-            insertRegisteredCollection.run({ collectionAddress, collectionId, creator, blockNumber });
+            insertRegisteredCollection.run({
+                collectionAddress,
+                collectionId,
+                creator,
+                blockNumber,
+                contractHex: contractHex ?? null,
+            });
 
             // Mark as marketplace-registered (handles both new external and existing factory collections)
             markCollectionRegistered.run({ collectionAddress });

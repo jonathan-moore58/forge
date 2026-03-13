@@ -3,18 +3,21 @@
  *
  * Provides: listNFT, buyNFT, cancelListing, makeOffer, acceptOffer, cancelOffer.
  *
- * buyNFT and makeOffer are payable — they require setTransactionDetails
- * with the purchase/offer amount sent to the marketplace contract.
+ * buyNFT is payable — it sends sats to the marketplace contract.
+ * makeOffer is NOT payable — it just records the offer on-chain.
+ * Payment outputs:
+ *   Simulation: flags=hasTo (1) + hex address (contract matches via toHex())
+ *   PSBT:       P2TR scriptPubKey { script } (creates P2TR output on Bitcoin)
  */
 
 import { useCallback, useRef } from 'react';
-import { Address } from '@btc-vision/transaction';
-import { toSatoshi } from '@btc-vision/bitcoin';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { ContractService } from '@/services/ContractService';
 import { CONTRACT_ADDRESSES, type ForgeNetwork } from '@/config/contracts';
+import { resolveAddress } from '@/utils/address';
 import { useTransaction, type UseTransactionOptions } from './useTransaction';
 import { marketKeys } from './useMarketplace';
+import { resolveContractPaymentInfo, buildSimulationOutput, buildPaymentOutputs } from '@/utils/p2tr';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -45,7 +48,7 @@ export function useMarketplaceActions(options: UseMarketplaceActionsOptions) {
         marketKeys.stats(network),
     ];
 
-    const tx = useTransaction({ ...txOptions, invalidateKeys });
+    const tx = useTransaction({ label: 'Marketplace', ...txOptions, invalidateKeys });
 
     /**
      * List an NFT for sale on the marketplace.
@@ -61,7 +64,7 @@ export function useMarketplaceActions(options: UseMarketplaceActionsOptions) {
         return tx.execute(async () => {
             const market = ContractService.getMarketplace(network);
             market.setSender(walletAddrRef.current!);
-            const collectionAddr = Address.fromString(collection);
+            const collectionAddr = await resolveAddress(collection, network);
             return await market.listNFT(collectionAddr, tokenId, price);
         });
     }, [walletAddr, network, tx]);
@@ -77,23 +80,43 @@ export function useMarketplaceActions(options: UseMarketplaceActionsOptions) {
         if (!walletAddrRef.current) throw new Error('Wallet not connected');
         if (!marketplaceAddress) throw new Error('Marketplace not deployed');
 
-        const extraOutputs = [{ address: marketplaceAddress, value: toSatoshi(price) }];
+        console.log('[FORGE][buyNFT] Starting', {
+            listingId: listingId.toString(),
+            price: price.toString(),
+            buyer: walletAddrRef.current,
+            marketplaceAddress,
+        });
+
+        // Resolve contract payment info (hex address + P2TR script)
+        const market = ContractService.getMarketplace(network);
+        const paymentInfo = await resolveContractPaymentInfo(market, 'marketplace-buy');
+
+        if (!paymentInfo) {
+            console.error('[FORGE][buyNFT] Failed to resolve payment info');
+            throw new Error('Failed to resolve marketplace payment info');
+        }
+
+        const simOutput = buildSimulationOutput(paymentInfo.p2trScript, marketplaceAddress, price, paymentInfo.hexAddress);
+        console.log('[FORGE][buyNFT] Simulation output', {
+            to: simOutput.to,
+            value: simOutput.value.toString(),
+            flags: simOutput.flags,
+            scriptPubKeyLen: simOutput.scriptPubKey?.length,
+            hexAddress: paymentInfo.hexAddress,
+        });
+
+        const extraOutputs = buildPaymentOutputs(paymentInfo.p2trScript, marketplaceAddress, price);
 
         return tx.execute(async () => {
             const market = ContractService.getMarketplace(network);
             market.setSender(walletAddrRef.current!);
 
-            // Send payment to marketplace contract (for simulation)
             market.setTransactionDetails({
                 inputs: [],
-                outputs: [{
-                    index: 1,
-                    to: marketplaceAddress,
-                    value: price,
-                    flags: 0,
-                }],
+                outputs: [simOutput],
             });
 
+            console.log('[FORGE][buyNFT] Calling market.buyNFT with listingId:', listingId.toString());
             return await market.buyNFT(listingId);
         }, undefined, extraOutputs);
     }, [walletAddr, network, marketplaceAddress, tx]);
@@ -127,32 +150,17 @@ export function useMarketplaceActions(options: UseMarketplaceActionsOptions) {
         tokenId: bigint,
         price: bigint,
         expiryBlock: bigint,
-        isCollectionWide: boolean = false,
     ) => {
         if (!walletAddrRef.current) throw new Error('Wallet not connected');
-        if (!marketplaceAddress) throw new Error('Marketplace not deployed');
-
-        const extraOutputs = [{ address: marketplaceAddress, value: toSatoshi(price) }];
 
         return tx.execute(async () => {
             const market = ContractService.getMarketplace(network);
             market.setSender(walletAddrRef.current!);
 
-            // Send offer amount to marketplace (held in escrow — for simulation)
-            market.setTransactionDetails({
-                inputs: [],
-                outputs: [{
-                    index: 1,
-                    to: marketplaceAddress,
-                    value: price,
-                    flags: 0,
-                }],
-            });
-
-            const collectionAddr = Address.fromString(collection);
-            return await market.makeOffer(collectionAddr, tokenId, price, expiryBlock, isCollectionWide);
-        }, undefined, extraOutputs);
-    }, [walletAddr, network, marketplaceAddress, tx]);
+            const collectionAddr = await resolveAddress(collection, network);
+            return await market.makeOffer(collectionAddr, tokenId, price, expiryBlock);
+        });
+    }, [walletAddr, network, tx]);
 
     /**
      * Accept an offer (NFT owner only).

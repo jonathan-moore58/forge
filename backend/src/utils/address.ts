@@ -83,7 +83,11 @@ export function addressToRawHex(addr: string): string {
  *      Detected by first 22 hex chars being '0'. Convert via paddedHexToBech32m().
  *  - Contract public key (from RPC `contractAddress`):
  *      32-byte actual public key. Cannot be converted to bech32m synchronously
- *      (requires btc_getCode RPC). Falls back to rawHexToAddress() (P2TR encoding).
+ *      (requires btc_getCode RPC). Returns lowercase hex as-is.
+ *
+ * IMPORTANT: Do NOT use rawHexToAddress() for contract public keys — that creates
+ * P2TR (witness v1) addresses but contracts use P2OP (witness v16). The enricher
+ * will resolve hex → bech32m asynchronously via btc_getCode.
  */
 export function normalizeAddress(addr: string): string {
     // If it already looks like a Bech32 address, return as-is
@@ -99,6 +103,14 @@ export function normalizeAddress(addr: string): string {
         if (bech32mAddr) return bech32mAddr;
     }
 
+    // For non-padded 32-byte hex (contract public key), return as lowercase hex.
+    // Do NOT create P2TR address — contracts use P2OP (witness v16), not P2TR (v1).
+    // The enricher's resolveContractHex() handles hex → bech32m asynchronously.
+    if (/^(0x)?[0-9a-fA-F]{64}$/.test(addr)) {
+        return clean.toLowerCase();
+    }
+
+    // Fallback: try P2TR encoding for wallet addresses or other formats
     return rawHexToAddress(addr);
 }
 

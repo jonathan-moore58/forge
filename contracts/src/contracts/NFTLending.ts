@@ -232,7 +232,7 @@ export class NFTLending extends ReentrancyGuard {
         // ── INTERACTION (external call AFTER state is finalized) ──
         // Escrow: Transfer NFT from borrower to this contract
         const escrowCalldata: BytesWriter = new BytesWriter(SELECTOR_BYTE_LENGTH + 32 + 32 + 32);
-        escrowCalldata.writeSelector(encodeSelector('safeTransferFrom(address,address,uint256)'));
+        escrowCalldata.writeSelector(encodeSelector('transferFrom(address,address,uint256)'));
         escrowCalldata.writeAddress(sender);
         escrowCalldata.writeAddress(Blockchain.contractAddress);
         escrowCalldata.writeU256(tokenId);
@@ -283,7 +283,7 @@ export class NFTLending extends ReentrancyGuard {
         const tokenId: u256 = this._loanTokenId.get(loanId);
 
         const returnCalldata: BytesWriter = new BytesWriter(SELECTOR_BYTE_LENGTH + 32 + 32 + 32);
-        returnCalldata.writeSelector(encodeSelector('safeTransferFrom(address,address,uint256)'));
+        returnCalldata.writeSelector(encodeSelector('transferFrom(address,address,uint256)'));
         returnCalldata.writeAddress(Blockchain.contractAddress);
         returnCalldata.writeAddress(sender);
         returnCalldata.writeU256(tokenId);
@@ -462,7 +462,7 @@ export class NFTLending extends ReentrancyGuard {
         const tokenId: u256 = this._loanTokenId.get(loanId);
 
         const nftCalldata: BytesWriter = new BytesWriter(SELECTOR_BYTE_LENGTH + 32 + 32 + 32);
-        nftCalldata.writeSelector(encodeSelector('safeTransferFrom(address,address,uint256)'));
+        nftCalldata.writeSelector(encodeSelector('transferFrom(address,address,uint256)'));
         nftCalldata.writeAddress(Blockchain.contractAddress);
         nftCalldata.writeAddress(sender);
         nftCalldata.writeU256(tokenId);
@@ -522,7 +522,7 @@ export class NFTLending extends ReentrancyGuard {
         const tokenId: u256 = this._loanTokenId.get(loanId);
 
         const claimCalldata: BytesWriter = new BytesWriter(SELECTOR_BYTE_LENGTH + 32 + 32 + 32);
-        claimCalldata.writeSelector(encodeSelector('safeTransferFrom(address,address,uint256)'));
+        claimCalldata.writeSelector(encodeSelector('transferFrom(address,address,uint256)'));
         claimCalldata.writeAddress(Blockchain.contractAddress);
         claimCalldata.writeAddress(sender);
         claimCalldata.writeU256(tokenId);

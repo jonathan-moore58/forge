@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WalletConnectProvider } from '@btc-vision/walletconnect';
 import { NetworkProvider } from './contexts/NetworkContext';
+import { TxToastProvider } from './contexts/TxToastContext';
 import { App } from './App';
 import './styles/global.css';
 
@@ -25,9 +26,11 @@ createRoot(rootEl).render(
         <WalletConnectProvider theme="dark">
             <QueryClientProvider client={queryClient}>
                 <NetworkProvider>
-                    <BrowserRouter>
-                        <App />
-                    </BrowserRouter>
+                    <TxToastProvider>
+                        <BrowserRouter>
+                            <App />
+                        </BrowserRouter>
+                    </TxToastProvider>
                 </NetworkProvider>
             </QueryClientProvider>
         </WalletConnectProvider>

@@ -13,22 +13,23 @@ import {
     StoredBoolean,
     StoredAddress,
     EMPTY_POINTER,
+    Bech32,
 } from '@btc-vision/btc-runtime/runtime';
 
 import { MintedEvent, PhaseChangedEvent, CollectionConfiguredEvent } from '../lib/events';
 import { MAX_ROYALTY_BPS } from '../lib/constants';
 
 /**
- * CollectionTemplate v13 — Lightweight OP721 for FORGE.
+ * CollectionTemplate v14 — Lightweight OP721 for FORGE.
  *
- * v13 changes (vs v12):
- *   - initialize() takes 4 numeric params ONLY (no strings) to avoid OPNet
- *     VM OOM / "Revert error too long" caused by runtime string parsing
- *   - Calls instantiate() with placeholder name/symbol ('_')
- *   - New setCollectionInfo(name, symbol) sets real name/symbol in separate TX
- *   - Each TX does ONE kind of heavy operation to stay under VM memory
+ * v14 changes (vs v13):
+ *   - initialize() takes 6 params: name, symbol, maxSupply, mintPrice, royaltyBps, royaltyRecipient
+ *   - Passes real name/symbol to OP721 instantiate() (no more placeholders)
+ *   - Custom abort handler (in index-collection.ts) strips file paths from errors,
+ *     fixing "Revert error too long" VM issue that blocked ALL reverts
+ *   - setCollectionInfo() kept for renaming flexibility but NOT required in deploy flow
  *
- * TX flow: deploy → initialize(4 numbers) → setCollectionInfo(2 strings) → optional changeMetadata(4 strings)
+ * TX flow: deploy → initialize(6 params) → optional changeMetadata(4 strings)
  *
  * Sale phases: INACTIVE(0) → PUBLIC(2) → ENDED(3)
  */
@@ -74,23 +75,23 @@ export class CollectionTemplate extends OP721 {
 
     /**
      * onDeployment — direct WASM deployment only.
-     * Stores the deployer as collection owner. All config set via
-     * initialize() + setCollectionInfo() in separate TXs.
+     * Stores the deployer as collection owner.
+     * All config set via initialize() in TX2.
      */
     public override onDeployment(_calldata: Calldata): void {
         this._collectionOwner.value = Blockchain.tx.sender;
     }
 
     /**
-     * Initialize — numeric config only (4 params, NO strings).
+     * Initialize — full config in one TX (6 params).
      *
-     * Strings are set separately via setCollectionInfo() to avoid
-     * OPNet VM OOM from runtime string parsing + instantiate() in one TX.
-     *
-     * Calls instantiate() with placeholder name/symbol ('_') so the
-     * OP721 base class is happy. Real name/symbol set via setCollectionInfo().
+     * Reads name + symbol as strings, then 4 numeric params.
+     * Custom abort handler keeps error messages short so the VM
+     * never rejects them with "Revert error too long".
      */
     @method(
+        { name: 'name', type: ABIDataTypes.STRING },
+        { name: 'symbol', type: ABIDataTypes.STRING },
         { name: 'maxSupply', type: ABIDataTypes.UINT256 },
         { name: 'mintPrice', type: ABIDataTypes.UINT256 },
         { name: 'royaltyBps', type: ABIDataTypes.UINT256 },
@@ -112,7 +113,8 @@ export class CollectionTemplate extends OP721 {
     /**
      * Set collection name and symbol. Owner only.
      * Writes directly to OP721 base class _name and _symbol storage.
-     * Separate TX from initialize() to avoid string parsing + instantiate() in same TX.
+     * Not needed in normal 2-TX flow (initialize() sets name/symbol).
+     * Kept for renaming flexibility.
      */
     @method(
         { name: 'name', type: ABIDataTypes.STRING },
@@ -230,6 +232,33 @@ export class CollectionTemplate extends OP721 {
         return writer;
     }
 
+    /**
+     * Override OP721 changeMetadata — allows empty strings (base throws on empty).
+     * Uses our onlyCollectionOwner() instead of base onlyDeployer().
+     * Only writes non-empty fields (partial update).
+     */
+    @method(
+        { name: 'icon', type: ABIDataTypes.STRING },
+        { name: 'banner', type: ABIDataTypes.STRING },
+        { name: 'description', type: ABIDataTypes.STRING },
+        { name: 'website', type: ABIDataTypes.STRING },
+    )
+    public override changeMetadata(calldata: Calldata): BytesWriter {
+        this.onlyCollectionOwner();
+
+        const icon: string = calldata.readStringWithLength();
+        const banner: string = calldata.readStringWithLength();
+        const description: string = calldata.readStringWithLength();
+        const website: string = calldata.readStringWithLength();
+
+        if (icon.length > 0) this._collectionIcon.value = icon;
+        if (banner.length > 0) this._collectionBanner.value = banner;
+        if (description.length > 0) this._collectionDescription.value = description;
+        if (website.length > 0) this._collectionWebsite.value = website;
+
+        return new BytesWriter(0);
+    }
+
     /** Update mint price. Owner only. */
     @method({ name: 'price', type: ABIDataTypes.UINT256 })
     @returns({ name: 'success', type: ABIDataTypes.BOOL })
@@ -311,16 +340,23 @@ export class CollectionTemplate extends OP721 {
     /* ================================================================== */
 
     /**
-     * Reads 4 numeric params from calldata and calls instantiate().
-     * NO string reads — strings are set via setCollectionInfo() in a separate TX.
-     * Placeholder '_' used for name/symbol to satisfy OP721 instantiate() validation.
+     * Reads 6 params from calldata (2 strings + 4 numbers) and calls instantiate().
+     * Custom abort handler ensures any revert stays under VM error buffer limit.
      */
     private initializeFromCalldata(calldata: Calldata): void {
+        const name: string = calldata.readStringWithLength();
+        const symbol: string = calldata.readStringWithLength();
         const maxSupply: u256 = calldata.readU256();
         const mintPrice: u256 = calldata.readU256();
         const royaltyBps: u256 = calldata.readU256();
         const royaltyRecipient: Address = calldata.readAddress();
 
+        if (name.length == 0) {
+            throw new Revert('Empty name');
+        }
+        if (symbol.length == 0) {
+            throw new Revert('Empty symbol');
+        }
         if (maxSupply.isZero()) {
             throw new Revert('Supply=0');
         }
@@ -329,9 +365,8 @@ export class CollectionTemplate extends OP721 {
         }
 
         // skipDeployerVerification = true: onlyCollectionOwner() already verified.
-        // Placeholder '_' for name/symbol — real values set via setCollectionInfo().
         this.instantiate(new OP721InitParameters(
-            '_', '_', '', maxSupply,
+            name, symbol, '', maxSupply,
             '', '', '', '',
         ), true);
 
@@ -389,26 +424,65 @@ export class CollectionTemplate extends OP721 {
         }
     }
 
+    /**
+     * Verify that the transaction includes a payment output to this contract.
+     *
+     * Handles three scenarios:
+     *   1a. Simulation (flags=hasTo): output.to = hex address string
+     *   1b. On-chain (flags=hasTo):   output.to = bech32m address (VM encodes P2TR outputs as bech32m)
+     *   2.  Simulation (flags=hasScriptPubKey): output.scriptPublicKey = P2TR bytes [0x51, 0x20, ...32]
+     *
+     * On-chain, the VM sets hasTo=1 with a bech32m address and scriptPublicKey=null.
+     * We decode the bech32m to extract the 32-byte witness program (= contract address).
+     */
     private verifyPaymentToSelf(requiredSats: u64): void {
         const selfAddr: Address = Blockchain.contract.address;
+        const selfHex: string = selfAddr.toHex();
         const outputs = Blockchain.tx.outputs;
 
         for (let i: i32 = 0; i < outputs.length; i++) {
             const output = outputs[i];
             if (output.value < requiredSats) continue;
 
-            const script: Uint8Array | null = output.scriptPublicKey;
-            if (script === null || script.length != 34) continue;
-            if (script[0] != 0x51 || script[1] != 0x20) continue;
+            // Method 1: Check output.to (string)
+            const to: string | null = output.to;
+            if (to !== null) {
+                // 1a: Hex match (simulation passes hex via setTransactionDetails)
+                // Address.toHex() returns WITH "0x" prefix. Accept both forms:
+                if (to == selfHex) return;                   // "0xabc..." == "0xabc..."
+                const selfHexNoPrefix: string = selfHex.substring(2);
+                if (to == selfHexNoPrefix) return;           // "abc..." == "abc..."
 
-            let match: bool = true;
-            for (let j: i32 = 0; j < 32; j++) {
-                if (script[j + 2] != selfAddr[j]) {
-                    match = false;
-                    break;
+                // 1b: Bech32m decode (on-chain VM uses bech32m address string)
+                const decoded = Bech32.decodeOrNull(to);
+                if (decoded !== null) {
+                    const prog: Uint8Array = decoded.program;
+                    // P2TR: version=1, program=32 bytes = contract address bytes
+                    if (decoded.version == 1 && prog.length == 32) {
+                        let match: bool = true;
+                        for (let j: i32 = 0; j < 32; j++) {
+                            if (prog[j] != selfAddr[j]) {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (match) return;
+                    }
                 }
             }
-            if (match) return;
+
+            // Method 2: Check output.scriptPublicKey (bytes) — backward compat
+            const script: Uint8Array | null = output.scriptPublicKey;
+            if (script !== null && script.length == 34 && script[0] == 0x51 && script[1] == 0x20) {
+                let match: bool = true;
+                for (let j: i32 = 0; j < 32; j++) {
+                    if (script[j + 2] != selfAddr[j]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return;
+            }
         }
 
         throw new Revert('No payment');

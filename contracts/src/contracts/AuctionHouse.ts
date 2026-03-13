@@ -14,6 +14,7 @@ import {
     EMPTY_POINTER,
     encodeSelector,
     SELECTOR_BYTE_LENGTH,
+    Bech32,
 } from '@btc-vision/btc-runtime/runtime';
 
 import {
@@ -462,7 +463,7 @@ export class AuctionHouse extends ReentrancyGuard {
         const tokenId: u256 = this._auctionTokenId.get(auctionId);
 
         const transferCalldata: BytesWriter = new BytesWriter(SELECTOR_BYTE_LENGTH + 32 + 32 + 32);
-        transferCalldata.writeSelector(encodeSelector('safeTransferFrom(address,address,uint256)'));
+        transferCalldata.writeSelector(encodeSelector('transferFrom(address,address,uint256)'));
         transferCalldata.writeAddress(sellerAddr);
         transferCalldata.writeAddress(sender);
         transferCalldata.writeU256(tokenId);
@@ -532,7 +533,7 @@ export class AuctionHouse extends ReentrancyGuard {
         const tokenId: u256 = this._auctionTokenId.get(auctionId);
 
         const transferCalldata: BytesWriter = new BytesWriter(SELECTOR_BYTE_LENGTH + 32 + 32 + 32);
-        transferCalldata.writeSelector(encodeSelector('safeTransferFrom(address,address,uint256)'));
+        transferCalldata.writeSelector(encodeSelector('transferFrom(address,address,uint256)'));
         transferCalldata.writeAddress(sellerAddr);
         transferCalldata.writeAddress(winnerAddr);
         transferCalldata.writeU256(tokenId);
@@ -707,26 +708,58 @@ export class AuctionHouse extends ReentrancyGuard {
      * Verify that a P2TR output in the current transaction pays this contract
      * at least `requiredSats` satoshis. Reverts if no matching output found.
      */
+    /**
+     * Verify that the transaction includes a payment output to this contract.
+     * Handles simulation (hex in output.to), on-chain (bech32m in output.to),
+     * and legacy simulation (scriptPublicKey bytes).
+     */
     private verifyPaymentToSelf(requiredSats: u64): void {
         const selfAddr: Address = Blockchain.contract.address;
+        const selfHex: string = selfAddr.toHex();
         const outputs = Blockchain.tx.outputs;
 
         for (let i: i32 = 0; i < outputs.length; i++) {
             const output = outputs[i];
             if (output.value < requiredSats) continue;
 
-            const script: Uint8Array | null = output.scriptPublicKey;
-            if (script === null || script.length != 34) continue;
-            if (script[0] != 0x51 || script[1] != 0x20) continue;
+            // Method 1: Check output.to (string)
+            const to: string | null = output.to;
+            if (to !== null) {
+                // 1a: Hex match (simulation passes hex via setTransactionDetails)
+                // Address.toHex() returns WITH "0x" prefix. Accept both forms:
+                if (to == selfHex) return;                   // "0xabc..." == "0xabc..."
+                const selfHexNoPrefix: string = selfHex.substring(2);
+                if (to == selfHexNoPrefix) return;           // "abc..." == "abc..."
 
-            let match: bool = true;
-            for (let j: i32 = 0; j < 32; j++) {
-                if (script[j + 2] != selfAddr[j]) {
-                    match = false;
-                    break;
+                // 1b: Bech32m decode (on-chain VM uses bech32m address string)
+                const decoded = Bech32.decodeOrNull(to);
+                if (decoded !== null) {
+                    const prog: Uint8Array = decoded.program;
+                    if (decoded.version == 1 && prog.length == 32) {
+                        let match: bool = true;
+                        for (let j: i32 = 0; j < 32; j++) {
+                            if (prog[j] != selfAddr[j]) {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (match) return;
+                    }
                 }
             }
-            if (match) return;
+
+            // Method 2: Check output.scriptPublicKey (bytes) — backward compat
+            const script: Uint8Array | null = output.scriptPublicKey;
+            if (script !== null && script.length == 34 && script[0] == 0x51 && script[1] == 0x20) {
+                let match: bool = true;
+                for (let j: i32 = 0; j < 32; j++) {
+                    if (script[j + 2] != selfAddr[j]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return;
+            }
         }
 
         throw new Revert('Insufficient BTC payment to contract');

@@ -58,6 +58,74 @@ const COLLECTION_ABI: BitcoinInterfaceAbi = [
 
 let _provider: JSONRpcProvider | null = null;
 
+/**
+ * Patch a provider to strip the spurious "OP_NET: Revert error too long."
+ * revert from RPC responses that also contain a valid result.
+ *
+ * The OPNet VM attaches this revert to all btc_call responses for
+ * contracts whose WASM triggers certain memory/size thresholds, even
+ * when the call executes successfully. The opnet SDK checks
+ * `result.revert` before `result.result`, treating every call as a
+ * failure.
+ *
+ * Only strip the revert when the decoded result is > 1 byte (genuine
+ * method output). A 1-byte result (0x00 → "AA==") is a VM placeholder
+ * meaning the call genuinely failed — keep the revert in that case.
+ */
+function patchProviderForSpuriousRevert(provider: JSONRpcProvider): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const p = provider as any;
+    const originalSend = p._send.bind(provider);
+
+    p._send = async function (payload: unknown): Promise<unknown[]> {
+        const responses: unknown[] = await originalSend(payload);
+
+        for (const responseSet of responses) {
+            if (!responseSet || typeof responseSet !== 'object') continue;
+
+            const processOne = (resp: Record<string, unknown>) => {
+                const r = resp.result;
+                if (!r || typeof r !== 'object') return;
+
+                const inner = r as Record<string, unknown>;
+                if (!inner.result || !inner.revert) return;
+                if (typeof inner.revert !== 'string') return;
+                if (typeof inner.result !== 'string') return;
+
+                // Decode the base64 revert and check for the known VM message
+                try {
+                    const decoded = Buffer.from(inner.revert as string, 'base64').toString();
+                    if (!decoded.includes('Revert error too long')) return;
+
+                    // Check result size — 1-byte result is a VM placeholder (call failed)
+                    const resultBytes = Buffer.from(inner.result as string, 'base64');
+                    if (resultBytes.length <= 1) {
+                        log.debug(`VM "Revert error too long" with ${resultBytes.length}-byte result — call genuinely failed`);
+                        return; // keep the revert — it's real
+                    }
+
+                    log.debug(`Stripped spurious VM "Revert error too long" — result has ${resultBytes.length} bytes of valid data`);
+                    delete inner.revert;
+                } catch {
+                    // Not valid base64 — leave it alone
+                }
+            };
+
+            if (Array.isArray(responseSet)) {
+                for (const item of responseSet) {
+                    if (item && typeof item === 'object') {
+                        processOne(item as Record<string, unknown>);
+                    }
+                }
+            } else {
+                processOne(responseSet as Record<string, unknown>);
+            }
+        }
+
+        return responses;
+    };
+}
+
 function getProvider(): JSONRpcProvider {
     if (!_provider) {
         const net = getNetwork();
@@ -66,6 +134,9 @@ function getProvider(): JSONRpcProvider {
             url: config.rpcUrl,
             network: net,
         });
+
+        // Apply the workaround for the OPNet VM revert bug
+        patchProviderForSpuriousRevert(_provider);
     }
     return _provider;
 }
@@ -199,9 +270,13 @@ async function fetchCollectionMetadata(address: string): Promise<CollectionMetad
 
 export function createMetadataEnricher(db: DatabaseSync) {
     // Prepared statements
+    // Retry (unknown) collections, but with a cooldown (only if last_refreshed is
+    // NULL or older than 5 minutes). This prevents hammering RPC for contracts that
+    // genuinely don't exist or don't implement the required methods.
     const findUnenriched = db.prepare(`
         SELECT collection_address FROM collections
-        WHERE name = '' OR name IS NULL OR name = '(unknown)'
+        WHERE (name = '' OR name IS NULL)
+           OR (name = '(unknown)' AND (last_refreshed IS NULL OR last_refreshed < unixepoch('now') - 300))
         LIMIT @limit
     `);
 
@@ -291,8 +366,7 @@ export function createMetadataEnricher(db: DatabaseSync) {
                     log.info(`  ${addr} → "${meta.name}" (${meta.symbol}) supply=${meta.totalSupply}/${meta.maxSupply} icon=${meta.icon ? 'yes' : 'no'} banner=${meta.banner ? 'yes' : 'no'}`);
                     enriched++;
                 } else {
-                    // Mark as attempted so we don't retry forever
-                    // Set name to a placeholder that indicates fetch failed
+                    // Mark as attempted with cooldown — will retry after 5 minutes
                     updateMetadata.run({
                         name: '(unknown)',
                         symbol: '',
@@ -308,7 +382,9 @@ export function createMetadataEnricher(db: DatabaseSync) {
                         website: '',
                         collectionAddress: addr,
                     });
-                    log.warn(`  ${addr} → metadata fetch failed, marked as (unknown)`);
+                    // Set last_refreshed to enable the 5-minute cooldown before retry
+                    markRefreshed.run({ collectionAddress: addr });
+                    log.warn(`  ${addr} → metadata fetch failed, will retry in 5 minutes`);
                 }
 
                 await delay(RPC_DELAY_MS);
@@ -325,7 +401,7 @@ export function createMetadataEnricher(db: DatabaseSync) {
             const meta = await fetchCollectionMetadata(address);
             if (!meta) return false;
 
-            updateMetadata.run({
+            const result = updateMetadata.run({
                 name: meta.name,
                 symbol: meta.symbol,
                 maxSupply: meta.maxSupply,
@@ -340,6 +416,36 @@ export function createMetadataEnricher(db: DatabaseSync) {
                 website: meta.website,
                 collectionAddress: address,
             });
+
+            // If no row matched (address format mismatch: bech32m vs hex key),
+            // try finding the row by contract_hex and update + migrate.
+            if (result.changes === 0) {
+                const hex = await resolveContractHex(address);
+                if (hex) {
+                    const row = db.prepare(
+                        'SELECT collection_address FROM collections WHERE contract_hex = ?',
+                    ).get(hex) as { collection_address: string } | undefined;
+
+                    if (row) {
+                        updateMetadata.run({
+                            name: meta.name, symbol: meta.symbol, maxSupply: meta.maxSupply,
+                            totalSupply: meta.totalSupply, mintPrice: meta.mintPrice,
+                            royaltyBps: meta.royaltyBps, salePhase: meta.salePhase,
+                            baseUri: meta.baseUri, icon: meta.icon, banner: meta.banner,
+                            description: meta.description, website: meta.website,
+                            collectionAddress: row.collection_address,
+                        });
+                        // Migrate hex key → bech32m for cleaner URLs
+                        if (row.collection_address !== address && !row.collection_address.startsWith('opt1')) {
+                            db.prepare(
+                                'UPDATE collections SET collection_address = ? WHERE collection_address = ?',
+                            ).run(address, row.collection_address);
+                            log.info(`enrichOne: migrated key ${row.collection_address} → ${address}`);
+                        }
+                    }
+                }
+            }
+
             return true;
         },
 

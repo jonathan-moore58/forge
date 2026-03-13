@@ -292,8 +292,8 @@ export function ProfilePage(): JSX.Element {
 
     /* ── Real blockchain hooks ── */
     const { network } = useNetwork();
-    const { address: rawWalletAddr } = useWalletConnect();
-    const walletAddress = rawWalletAddr ? String(rawWalletAddr) : undefined;
+    const { walletAddress: rawWalletAddr } = useWalletConnect();
+    const walletAddress = rawWalletAddr ? (typeof rawWalletAddr === 'string' ? rawWalletAddr : String(rawWalletAddr)) : undefined;
     const { data: marketStats } = useMarketStats(network);
 
     const displayAddress = walletAddress

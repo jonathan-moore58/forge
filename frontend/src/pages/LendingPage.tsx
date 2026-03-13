@@ -1,11 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { useNetwork } from '@/hooks/useNetwork';
 import { useLendingActions } from '@/hooks/useLendingActions';
+import { useApprovalCheck } from '@/hooks/useApprovalCheck';
+import { CONTRACT_ADDRESSES } from '@/config/contracts';
+import { IndexerAPI } from '@/services/IndexerAPI';
 import {
     useLendingStats,
     usePendingLoans,
+    useMyPendingLoans,
     useMyBorrowedLoans,
     useMyFundedLoans,
     type LoanItem,
@@ -41,7 +46,13 @@ const DURATION_OPTIONS: readonly { readonly value: string; readonly label: strin
     { value: '3m', label: '3 Months', blocks: 12_960 },
 ];
 
-const PAYMENT_TOKENS = ['MOTO', 'PILL'] as const;
+/** OP-20 token name → contract hex address */
+const PAYMENT_TOKEN_MAP: Record<string, string> = {
+    MOTO: '0xfd4473840751d58d9f8b73bdd57d6c5260453d5518bd7cd02d0a4cf3df9bf4dd',
+    PILL: '0xb09fc29c112af8293539477e23d8df1d3126639642767d707277131352040cbb',
+};
+
+const PAYMENT_TOKEN_NAMES = Object.keys(PAYMENT_TOKEN_MAP);
 
 const STATUS_LABELS: Record<number, string> = {
     0: 'pending',
@@ -50,8 +61,6 @@ const STATUS_LABELS: Record<number, string> = {
     3: 'defaulted',
     4: 'cancelled',
 };
-
-const ANIM_EASE = [0.22, 1, 0.36, 1] as const;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -86,6 +95,23 @@ function durationBlocksToLabel(blocks: number): string {
 
 function getStatusLabel(status: number): string {
     return STATUS_LABELS[status] ?? 'unknown';
+}
+
+/** Resolve a payment token: if it's a known name (MOTO, PILL), return its hex address; otherwise pass through */
+function resolvePaymentTokenAddress(input: string): string {
+    const upper = input.trim().toUpperCase();
+    if (PAYMENT_TOKEN_MAP[upper]) return PAYMENT_TOKEN_MAP[upper];
+    return input.trim();
+}
+
+/** Reverse-lookup: hex address → display name (or shortened address) */
+function paymentTokenDisplayName(addr: string): string {
+    const cleanAddr = addr.replace(/^0x/i, '').toLowerCase();
+    for (const [name, hex] of Object.entries(PAYMENT_TOKEN_MAP)) {
+        const cleanHex = hex.replace(/^0x/i, '').toLowerCase();
+        if (cleanHex === cleanAddr) return name;
+    }
+    return shortenAddr(addr);
 }
 
 /* ------------------------------------------------------------------ */
@@ -188,190 +214,6 @@ const sectionTitleStyle: React.CSSProperties = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  Hero Visual — Animated NFT Lending Concept                         */
-/* ------------------------------------------------------------------ */
-
-function LendingHeroVisual(): JSX.Element {
-    return (
-        <div style={{ position: 'relative', height: '100%', minHeight: '420px', perspective: '1000px' }}>
-            {/* Decorative rings */}
-            <div style={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '300px', height: '300px', borderRadius: '50%',
-                border: '1px solid rgba(255, 107, 0, 0.06)',
-                pointerEvents: 'none',
-            }} />
-            <div style={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '200px', height: '200px', borderRadius: '50%',
-                border: '1px solid rgba(0, 212, 255, 0.04)',
-                pointerEvents: 'none',
-            }} />
-
-            {/* NFT Card — the collateral */}
-            <motion.div
-                initial={{ opacity: 0, y: 50, rotateY: 15 }}
-                animate={{ opacity: 1, y: 0, rotateY: -4 }}
-                transition={{ duration: 0.9, delay: 0.3, ease: ANIM_EASE }}
-                style={{
-                    position: 'absolute', top: '5%', left: '10%',
-                    width: '200px',
-                    borderRadius: '16px',
-                    background: `linear-gradient(145deg, ${theme.colors.bg.raised} 0%, ${theme.colors.bg.overlay} 100%)`,
-                    border: `1px solid ${theme.colors.border.default}`,
-                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(255, 107, 0, 0.06)',
-                    overflow: 'hidden',
-                    zIndex: 3,
-                    animation: 'lending-float-1 7s ease-in-out infinite',
-                }}
-            >
-                {/* NFT Image area */}
-                <div style={{
-                    height: '140px',
-                    background: 'linear-gradient(135deg, rgba(255, 107, 0, 0.18) 0%, rgba(153, 69, 255, 0.12) 50%, rgba(0, 212, 255, 0.08) 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    position: 'relative',
-                }}>
-                    {/* NFT shape */}
-                    <div style={{
-                        width: '52px', height: '52px', borderRadius: '14px',
-                        background: 'linear-gradient(135deg, #ff6b00 0%, #ff8c3a 100%)',
-                        transform: 'rotate(45deg)',
-                        boxShadow: '0 8px 24px rgba(255, 107, 0, 0.35)',
-                    }} />
-                    {/* Lock overlay */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 1.2, duration: 0.5, ease: ANIM_EASE }}
-                        style={{
-                            position: 'absolute', bottom: '8px', right: '8px',
-                            width: '28px', height: '28px', borderRadius: '50%',
-                            background: 'rgba(0, 0, 0, 0.7)',
-                            backdropFilter: 'blur(8px)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '1px solid rgba(255, 107, 0, 0.3)',
-                        }}
-                    >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={theme.colors.brand.orange} strokeWidth="2.5" strokeLinecap="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                        </svg>
-                    </motion.div>
-                </div>
-                {/* NFT Info */}
-                <div style={{ padding: '12px 14px' }}>
-                    <div style={{ fontSize: '10px', color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Collateral</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: theme.colors.text.primary, marginTop: '2px', fontFamily: theme.fonts.heading }}>Genesis #0042</div>
-                    <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '4px', fontFamily: theme.fonts.mono }}>Locked in contract</div>
-                </div>
-            </motion.div>
-
-            {/* Token flow card — what borrower receives */}
-            <motion.div
-                initial={{ opacity: 0, x: 40, rotateY: -10 }}
-                animate={{ opacity: 1, x: 0, rotateY: 3 }}
-                transition={{ duration: 0.9, delay: 0.6, ease: ANIM_EASE }}
-                style={{
-                    position: 'absolute', top: '25%', right: '5%',
-                    width: '180px',
-                    borderRadius: '16px',
-                    background: `linear-gradient(145deg, ${theme.colors.bg.raised} 0%, rgba(20, 241, 149, 0.03) 100%)`,
-                    border: `1px solid rgba(20, 241, 149, 0.12)`,
-                    boxShadow: '0 16px 48px rgba(0, 0, 0, 0.4), 0 0 30px rgba(20, 241, 149, 0.04)',
-                    padding: '16px',
-                    zIndex: 2,
-                    animation: 'lending-float-2 8s ease-in-out infinite',
-                }}
-            >
-                <div style={{ fontSize: '10px', color: theme.colors.brand.green, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '10px' }}>Tokens Received</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <div style={{
-                        width: '32px', height: '32px', borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #14f195 0%, #0cb77a 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '14px', fontWeight: 800, color: '#0A0A0F',
-                    }}>M</div>
-                    <div>
-                        <div style={{ fontSize: '16px', fontWeight: 700, color: theme.colors.text.primary, fontFamily: theme.fonts.heading }}>50,000</div>
-                        <div style={{ fontSize: '10px', color: theme.colors.text.tertiary }}>MOTO tokens</div>
-                    </div>
-                </div>
-                {/* Progress bar showing loan health */}
-                <div style={{ marginTop: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: theme.colors.text.tertiary, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        <span>Loan Health</span>
-                        <span style={{ color: theme.colors.brand.green }}>Active</span>
-                    </div>
-                    <div style={{ height: '3px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)' }}>
-                        <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: '72%' }}
-                            transition={{ delay: 1.5, duration: 1, ease: ANIM_EASE }}
-                            style={{ height: '100%', borderRadius: '2px', background: `linear-gradient(90deg, ${theme.colors.brand.green}, ${theme.colors.brand.cyan})` }}
-                        />
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* Interest card — floating small card */}
-            <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.9, ease: ANIM_EASE }}
-                style={{
-                    position: 'absolute', bottom: '8%', left: '25%',
-                    borderRadius: '12px',
-                    background: theme.colors.bg.raised,
-                    border: `1px solid ${theme.colors.border.default}`,
-                    boxShadow: '0 12px 36px rgba(0, 0, 0, 0.4)',
-                    padding: '12px 18px',
-                    zIndex: 4,
-                    animation: 'lending-float-3 6s ease-in-out infinite',
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                        width: '24px', height: '24px', borderRadius: '6px',
-                        background: 'rgba(245, 158, 11, 0.12)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '11px',
-                    }}>
-                        %
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: theme.colors.brand.gold, fontFamily: theme.fonts.heading }}>10% APR</div>
-                        <div style={{ fontSize: '9px', color: theme.colors.text.tertiary }}>Interest Rate</div>
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* Animated connection line — from NFT to Tokens */}
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
-                <motion.path
-                    d="M 180 160 C 240 160, 260 200, 300 200"
-                    fill="none"
-                    stroke="url(#lendingGrad)"
-                    strokeWidth="1.5"
-                    strokeDasharray="6 4"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 0.5 }}
-                    transition={{ delay: 1, duration: 1.2, ease: ANIM_EASE }}
-                />
-                <defs>
-                    <linearGradient id="lendingGrad" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor={theme.colors.brand.orange} />
-                        <stop offset="100%" stopColor={theme.colors.brand.green} />
-                    </linearGradient>
-                </defs>
-            </svg>
-        </div>
-    );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Sub-Components                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -381,15 +223,33 @@ function LoanCard({
     onAction,
     showBorrower,
     disabled,
+    onApproveTokens,
+    isApproving,
 }: {
     readonly loan: LoanItem;
     readonly actionLabel: string;
     readonly onAction: (loan: LoanItem) => void;
     readonly showBorrower?: boolean;
     readonly disabled?: boolean;
+    readonly onApproveTokens?: (loan: LoanItem) => void;
+    readonly isApproving?: boolean;
 }): JSX.Element {
     const [hovered, setHovered] = useState(false);
     const statusLabel = getStatusLabel(loan.status);
+
+    // Fetch collection name from indexer (cached indefinitely — names don't change)
+    const collectionQuery = useQuery({
+        queryKey: ['collectionName', loan.collection],
+        queryFn: async () => {
+            const res = await IndexerAPI.collection(loan.collection);
+            return res.data;
+        },
+        staleTime: Infinity,
+        enabled: !!loan.collection,
+    });
+    const collectionName = collectionQuery.data?.name || collectionQuery.data?.symbol || null;
+
+    const tokenName = paymentTokenDisplayName(loan.paymentToken);
 
     const statusColor =
         statusLabel === 'pending' ? theme.colors.status.warning
@@ -415,12 +275,25 @@ function LoanCard({
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
+            {/* Header: Collection name + status badge */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: theme.spacing.md }}>
-                <div>
-                    <div style={{ fontSize: theme.fontSize.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>Collection</div>
-                    <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.primary, fontWeight: 600, fontFamily: theme.fonts.mono }}>
-                        {shortenAddr(loan.collection)}
-                    </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.tertiary, marginBottom: '4px' }}>Collection</div>
+                    {collectionName ? (
+                        <div style={{ fontSize: theme.fontSize.base, color: theme.colors.text.primary, fontWeight: 700, fontFamily: theme.fonts.heading }}>
+                            {collectionName}
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.secondary, fontFamily: theme.fonts.mono }}>
+                            {shortenAddr(loan.collection)}
+                        </div>
+                    )}
+                    {/* Show shortened address below name for context */}
+                    {collectionName && (
+                        <div style={{ fontSize: '10px', color: theme.colors.text.tertiary, fontFamily: theme.fonts.mono, marginTop: '2px' }}>
+                            {shortenAddr(loan.collection)}
+                        </div>
+                    )}
                 </div>
                 <div style={{
                     padding: '4px 10px',
@@ -431,20 +304,24 @@ function LoanCard({
                     letterSpacing: theme.letterSpacing.wider,
                     background: statusBg,
                     color: statusColor,
+                    flexShrink: 0,
+                    marginLeft: '12px',
                 }}>
                     {statusLabel}
                 </div>
             </div>
 
+            {/* Details grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: theme.spacing.md }}>
                 <div>
                     <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.tertiary, marginBottom: '2px' }}>Token ID</div>
                     <div style={{ fontSize: theme.fontSize.base, color: theme.colors.text.primary, fontWeight: 600 }}>#{loan.tokenId}</div>
                 </div>
                 <div>
-                    <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.tertiary, marginBottom: '2px' }}>Amount</div>
+                    <div style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.tertiary, marginBottom: '2px' }}>Loan Amount</div>
                     <div style={{ fontSize: theme.fontSize.base, color: theme.colors.brand.orange, fontWeight: 600 }}>
-                        {formatAmount(loan.amount)} <span style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.secondary }}>sats</span>
+                        {formatAmount(loan.amount)}{' '}
+                        <span style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.secondary, fontWeight: 500 }}>{tokenName}</span>
                     </div>
                 </div>
                 <div>
@@ -470,23 +347,53 @@ function LoanCard({
                 </div>
             )}
 
+            {/* Footer: payment info + action buttons */}
             <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
                 borderTop: `1px solid ${theme.colors.border.subtle}`,
                 paddingTop: theme.spacing.md,
             }}>
-                <span style={{ fontSize: theme.fontSize.xs, color: theme.colors.text.tertiary, fontFamily: theme.fonts.mono }}>
-                    {shortenAddr(loan.paymentToken)}
-                </span>
-                <button
-                    style={disabled ? buttonDisabledStyle : actionLabel === 'Claim Default' ? buttonDangerStyle : buttonStyle}
-                    onClick={() => !disabled && onAction(loan)}
-                    disabled={disabled}
-                >
-                    {actionLabel}
-                </button>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                }}>
+                    <div>
+                        <div style={{ fontSize: '10px', color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                            Payment Token
+                        </div>
+                        <span style={{ fontSize: theme.fontSize.sm, color: theme.colors.text.secondary, fontWeight: 600 }}>
+                            {tokenName}
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {/* Approve Tokens button (shown for lenders on pending loans) */}
+                        {onApproveTokens && loan.status === 0 && (
+                            <button
+                                style={{
+                                    ...(isApproving ? buttonDisabledStyle : {
+                                        ...buttonStyle,
+                                        background: 'transparent',
+                                        border: `1px solid ${theme.colors.brand.orange}`,
+                                        color: theme.colors.brand.orange,
+                                    }),
+                                    padding: '8px 14px',
+                                    fontSize: theme.fontSize.xs,
+                                }}
+                                onClick={() => !isApproving && onApproveTokens(loan)}
+                                disabled={isApproving}
+                            >
+                                {isApproving ? 'Approving...' : 'Approve Tokens'}
+                            </button>
+                        )}
+                        <button
+                            style={disabled ? buttonDisabledStyle : actionLabel === 'Claim Default' ? buttonDangerStyle : buttonStyle}
+                            onClick={() => !disabled && onAction(loan)}
+                            disabled={disabled}
+                        >
+                            {actionLabel}
+                        </button>
+                    </div>
+                </div>
             </div>
         </motion.div>
     );
@@ -524,7 +431,7 @@ function HowItWorksStep({
                     height: '52px',
                     borderRadius: '50%',
                     background: 'rgba(255, 107, 0, 0.08)',
-                    border: `1px solid rgba(255, 107, 0, 0.15)`,
+                    border: '1px solid rgba(255, 107, 0, 0.15)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -568,7 +475,6 @@ function HowItWorksStep({
 function EmptyState({ message }: { readonly message: string }): JSX.Element {
     return (
         <GlassCard style={{ textAlign: 'center', padding: '56px 32px' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.4 }}>📭</div>
             <p style={{ color: theme.colors.text.tertiary, margin: 0, fontSize: theme.fontSize.base, fontFamily: theme.fonts.body }}>{message}</p>
         </GlassCard>
     );
@@ -594,7 +500,6 @@ function LoadingState(): JSX.Element {
 function ErrorState({ message }: { readonly message: string }): JSX.Element {
     return (
         <GlassCard style={{ textAlign: 'center', padding: '56px 32px' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}>⚠️</div>
             <p style={{ color: theme.colors.status.error, margin: 0, fontSize: theme.fontSize.base, fontFamily: theme.fonts.body }}>{message}</p>
         </GlassCard>
     );
@@ -603,7 +508,6 @@ function ErrorState({ message }: { readonly message: string }): JSX.Element {
 function ConnectWalletBanner(): JSX.Element {
     return (
         <GlassCard glow="orange" style={{ textAlign: 'center', padding: '56px 32px' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔗</div>
             <p style={{ color: theme.colors.text.secondary, margin: 0, fontSize: theme.fontSize.md, fontFamily: theme.fonts.body, fontWeight: 500 }}>
                 Connect your wallet to create loan requests and manage your loans.
             </p>
@@ -618,19 +522,21 @@ function ConnectWalletBanner(): JSX.Element {
 export function LendingPage(): JSX.Element {
     /* ----- Shared hooks ----- */
     const { network } = useNetwork();
-    const { address: rawAddr } = useWalletConnect();
-    const walletAddr = rawAddr ? String(rawAddr) : undefined;
+    const { walletAddress: rawAddr } = useWalletConnect();
+    const walletAddr = rawAddr ? (typeof rawAddr === 'string' ? rawAddr : String(rawAddr)) : undefined;
     const lendingActions = useLendingActions({ network });
 
     /* ----- Data queries ----- */
     const statsQuery = useLendingStats(network);
     const pendingLoansQuery = usePendingLoans(network);
+    const myPendingQuery = useMyPendingLoans(network, walletAddr);
     const myBorrowedQuery = useMyBorrowedLoans(network, walletAddr);
     const myFundedQuery = useMyFundedLoans(network, walletAddr);
 
     /* ----- Local state ----- */
     const [activeTab, setActiveTab] = useState<LendingTab>('borrow');
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
 
     const [form, setForm] = useState<BorrowFormState>({
         collection: '',
@@ -640,6 +546,15 @@ export function LendingPage(): JSX.Element {
         interestBps: 1000,
         durationKey: '1w',
     });
+
+    /* ----- NFT Approval check ----- */
+    const lendingAddress = CONTRACT_ADDRESSES[network].lending;
+    const tokenIdForApproval = form.tokenId ? BigInt(form.tokenId) : undefined;
+    const approval = useApprovalCheck(
+        form.collection || undefined,
+        tokenIdForApproval,
+        lendingAddress || undefined,
+    );
 
     /* ----- Stats ----- */
     const stats = useMemo(() => {
@@ -657,12 +572,14 @@ export function LendingPage(): JSX.Element {
 
     /* ----- Determine if a funded loan is expired (can be claimed) ----- */
     const isLoanExpired = (_loan: LoanItem): boolean => {
+        // TODO: compare current block vs loan.startBlock + loan.durationBlocks
         return true;
     };
 
     /* ----- Form handlers ----- */
     function updateField<K extends keyof BorrowFormState>(key: K, value: BorrowFormState[K]): void {
         setForm((prev) => ({ ...prev, [key]: value }));
+        setFormError(null);
     }
 
     async function handleCreateLoan(): Promise<void> {
@@ -672,12 +589,20 @@ export function LendingPage(): JSX.Element {
         const durationOpt = DURATION_OPTIONS.find((o) => o.value === form.durationKey);
         if (!durationOpt) return;
 
+        // Resolve payment token name → address
+        const paymentTokenAddr = resolvePaymentTokenAddress(form.paymentToken);
+        if (!paymentTokenAddr) {
+            setFormError('Please select or enter a valid payment token address.');
+            return;
+        }
+
         setActionLoading('create');
+        setFormError(null);
         try {
             await lendingActions.createLoanRequest(
                 form.collection,
                 BigInt(form.tokenId),
-                form.paymentToken,
+                paymentTokenAddr,
                 BigInt(form.loanAmount),
                 BigInt(form.interestBps),
                 BigInt(durationOpt.blocks),
@@ -690,8 +615,8 @@ export function LendingPage(): JSX.Element {
                 interestBps: 1000,
                 durationKey: '1w',
             });
-        } catch {
-            // Error handled by useTransaction
+        } catch (err) {
+            setFormError(err instanceof Error ? err.message : 'Failed to create loan request.');
         } finally {
             setActionLoading(null);
         }
@@ -741,12 +666,25 @@ export function LendingPage(): JSX.Element {
         }
     }
 
-    /* ----- Split my borrowed loans into active vs pending ----- */
-    const myPendingBorrowed = useMemo(() => {
-        if (!walletAddr || !pendingLoansQuery.data) return [];
-        return pendingLoansQuery.data.filter((l) => l.borrower === walletAddr);
-    }, [pendingLoansQuery.data, walletAddr]);
+    /**
+     * Approve the lending contract to spend OP-20 tokens for a specific loan.
+     * Uses a large approval amount (type(uint256).max equivalent) for convenience.
+     */
+    const handleApproveTokens = useCallback(async (loan: LoanItem): Promise<void> => {
+        setActionLoading(`approve-${loan.id}`);
+        try {
+            // Approve a large amount so the lender doesn't need to re-approve
+            const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+            await lendingActions.approveOP20ForLending(loan.paymentToken, maxApproval);
+        } catch {
+            // Error handled by useTransaction
+        } finally {
+            setActionLoading(null);
+        }
+    }, [lendingActions]);
 
+    /* ----- Derived data ----- */
+    const myPendingBorrowed = myPendingQuery.data ?? [];
     const myActiveBorrowed = myBorrowedQuery.data ?? [];
     const myFundedLoans = myFundedQuery.data ?? [];
     const pendingLoans = pendingLoansQuery.data ?? [];
@@ -762,249 +700,51 @@ export function LendingPage(): JSX.Element {
             {/* Keyframes */}
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg); } }
-                @keyframes lending-float-1 { 0%, 100% { transform: translateY(0) rotateY(-4deg); } 50% { transform: translateY(-12px) rotateY(-2deg); } }
-                @keyframes lending-float-2 { 0%, 100% { transform: translateY(0) rotateY(3deg); } 50% { transform: translateY(-10px) rotateY(5deg); } }
-                @keyframes lending-float-3 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-                @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.3; } 100% { transform: scale(1.8); opacity: 0; } }
             `}</style>
 
-            {/* ======== HERO SECTION ======== */}
+            {/* ======== Page Header ======== */}
             <section style={{
-                position: 'relative',
-                overflow: 'hidden',
-                minHeight: '520px',
+                maxWidth: '1200px',
+                margin: '0 auto',
+                padding: '48px 48px 0',
             }}>
-                {/* Background glow blobs */}
-                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
                     <div style={{
-                        position: 'absolute', top: '10%', left: '5%', width: '500px', height: '500px',
-                        borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(255, 107, 0, 0.07) 0%, transparent 70%)',
-                        filter: 'blur(80px)',
-                    }} />
-                    <div style={{
-                        position: 'absolute', bottom: '10%', right: '10%', width: '400px', height: '400px',
-                        borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(20, 241, 149, 0.05) 0%, transparent 70%)',
-                        filter: 'blur(80px)',
-                    }} />
-                    <div style={{
-                        position: 'absolute', top: '40%', left: '50%', width: '300px', height: '300px',
-                        borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(153, 69, 255, 0.04) 0%, transparent 70%)',
-                        filter: 'blur(60px)',
-                    }} />
-                </div>
-
-                {/* Hero content — split layout */}
-                <div style={{
-                    position: 'relative',
-                    zIndex: 2,
-                    maxWidth: '1320px',
-                    margin: '0 auto',
-                    padding: '72px 48px 56px',
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 0.9fr)',
-                    gap: '48px',
-                    alignItems: 'center',
-                }}>
-                    {/* Left: Typography */}
-                    <div>
-                        {/* Eyebrow */}
-                        <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.5, ease: ANIM_EASE }}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                marginBottom: '24px',
-                            }}
-                        >
-                            <span style={{
-                                width: '8px', height: '8px', borderRadius: '50%',
-                                background: theme.colors.brand.green,
-                                boxShadow: '0 0 10px rgba(20, 241, 149, 0.6)',
-                                position: 'relative',
-                            }}>
-                                <span style={{
-                                    position: 'absolute', inset: '-4px',
-                                    borderRadius: '50%',
-                                    border: '1px solid rgba(20, 241, 149, 0.3)',
-                                    animation: 'pulse-ring 2s ease-out infinite',
-                                }} />
-                            </span>
-                            <span style={{
-                                fontSize: '11px', fontWeight: 700, fontFamily: theme.fonts.mono,
-                                letterSpacing: '0.12em', textTransform: 'uppercase',
-                                color: theme.colors.brand.green,
-                            }}>
-                                First on Bitcoin L1
-                            </span>
-                            <span style={{
-                                padding: '2px 8px', borderRadius: '4px',
-                                background: 'rgba(20, 241, 149, 0.08)',
-                                border: '1px solid rgba(20, 241, 149, 0.15)',
-                                fontSize: '10px', fontWeight: 700, fontFamily: theme.fonts.mono,
-                                letterSpacing: '0.08em', color: theme.colors.brand.green,
-                            }}>
-                                NEW
-                            </span>
-                        </motion.div>
-
-                        {/* Headline — stacked words */}
-                        <div style={{
-                            fontFamily: theme.fonts.heading,
-                            fontSize: 'clamp(42px, 5.5vw, 72px)',
-                            fontWeight: 800,
-                            lineHeight: 0.95,
-                            letterSpacing: '-0.05em',
-                        }}>
-                            <motion.div
-                                initial={{ opacity: 0, y: 40 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.7, delay: 0.1, ease: ANIM_EASE }}
-                                style={{ color: theme.colors.text.primary }}
-                            >
-                                Unlock.
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, y: 40 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.7, delay: 0.2, ease: ANIM_EASE }}
-                                style={{ color: theme.colors.text.primary }}
-                            >
-                                Liquidity.
-                            </motion.div>
-                            <motion.div
-                                initial={{ opacity: 0, y: 40 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.7, delay: 0.3, ease: ANIM_EASE }}
-                            >
-                                <span style={{
-                                    background: `linear-gradient(135deg, ${theme.colors.brand.orange} 0%, ${theme.colors.brand.gold} 50%, ${theme.colors.brand.orange} 100%)`,
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    position: 'relative',
-                                    display: 'inline-block',
-                                }}>
-                                    Instantly.
-                                    <motion.div
-                                        initial={{ scaleX: 0 }}
-                                        animate={{ scaleX: 1 }}
-                                        transition={{ duration: 0.8, delay: 0.9, ease: ANIM_EASE }}
-                                        style={{
-                                            position: 'absolute', bottom: '2px', left: 0, right: '10%',
-                                            height: '4px', borderRadius: '2px',
-                                            background: 'linear-gradient(90deg, #ff6b00, #f59e0b, transparent)',
-                                            transformOrigin: 'left',
-                                        }}
-                                    />
-                                </span>
-                            </motion.div>
-                        </div>
-
-                        {/* Description */}
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.5, ease: ANIM_EASE }}
-                            style={{
-                                marginTop: '28px',
-                                fontSize: '17px',
-                                lineHeight: 1.7,
-                                color: theme.colors.text.secondary,
-                                maxWidth: '460px',
-                            }}
-                        >
-                            Collateralize your NFTs to borrow{' '}
-                            <span style={{ color: theme.colors.text.primary, fontWeight: 600 }}>OP20 tokens</span> instantly.
-                            Earn yield as a lender. All on{' '}
-                            <span style={{ color: theme.colors.brand.orange, fontWeight: 600 }}>Bitcoin L1</span>.
-                        </motion.p>
-
-                        {/* CTAs */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.65, ease: ANIM_EASE }}
-                            style={{ display: 'flex', gap: '14px', marginTop: '36px' }}
-                        >
-                            <button
-                                onClick={() => setActiveTab('borrow')}
-                                style={{
-                                    ...buttonStyle,
-                                    padding: '14px 32px',
-                                    fontSize: '15px',
-                                    fontWeight: 700,
-                                    boxShadow: '0 0 24px rgba(255, 107, 0, 0.25), 0 4px 20px rgba(0, 0, 0, 0.4)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                }}
-                            >
-                                Start Borrowing
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M5 12h14M12 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('lend')}
-                                style={{
-                                    padding: '14px 32px',
-                                    fontSize: '15px',
-                                    fontWeight: 600,
-                                    border: `1px solid ${theme.colors.border.strong}`,
-                                    borderRadius: theme.radii.md,
-                                    background: 'rgba(255, 255, 255, 0.03)',
-                                    color: theme.colors.text.primary,
-                                    cursor: 'pointer',
-                                    fontFamily: theme.fonts.body,
-                                    transition: `all ${theme.transitions.base}`,
-                                }}
-                            >
-                                Earn as Lender
-                            </button>
-                        </motion.div>
-
-                        {/* Mini stats */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.6, delay: 0.9 }}
-                            style={{
-                                display: 'flex', gap: '36px', marginTop: '48px',
-                                paddingTop: '24px',
-                                borderTop: `1px solid ${theme.colors.border.subtle}`,
-                            }}
-                        >
-                            {[
-                                { value: String(stats.totalLoans), label: 'Total Loans' },
-                                { value: String(stats.activeLoans), label: 'Active' },
-                                { value: String(stats.totalRepaid), label: 'Repaid' },
-                            ].map((s) => (
-                                <div key={s.label}>
-                                    <div style={{
-                                        fontFamily: theme.fonts.mono, fontSize: '22px', fontWeight: 700,
-                                        color: theme.colors.text.primary, letterSpacing: '-0.03em',
-                                    }}>
-                                        {s.value}
-                                    </div>
-                                    <div style={{
-                                        fontSize: '11px', color: theme.colors.text.tertiary,
-                                        textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500, marginTop: '2px',
-                                    }}>
-                                        {s.label}
-                                    </div>
-                                </div>
-                            ))}
-                        </motion.div>
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        fontFamily: theme.fonts.mono,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: theme.colors.brand.orange,
+                        marginBottom: '12px',
+                    }}>
+                        Peer-to-Peer
                     </div>
-
-                    {/* Right: Animated visual */}
-                    <LendingHeroVisual />
-                </div>
+                    <h1 style={{
+                        fontSize: theme.fontSize['3xl'],
+                        fontWeight: 800,
+                        color: theme.colors.text.primary,
+                        margin: '0 0 12px 0',
+                        letterSpacing: theme.letterSpacing.tight,
+                        fontFamily: theme.fonts.heading,
+                    }}>
+                        NFT Lending
+                    </h1>
+                    <p style={{
+                        color: theme.colors.text.secondary,
+                        maxWidth: '560px',
+                        margin: 0,
+                        fontSize: theme.fontSize.md,
+                        lineHeight: 1.7,
+                    }}>
+                        Collateralize your NFTs to borrow OP-20 tokens instantly.
+                        Earn yield by funding loan requests. All on Bitcoin L1.
+                    </p>
+                </motion.div>
             </section>
 
             {/* ======== Stats Bar ======== */}
@@ -1015,7 +755,7 @@ export function LendingPage(): JSX.Element {
                 transition={{ duration: 0.5 }}
                 style={{
                     maxWidth: '1200px',
-                    margin: '0 auto 56px',
+                    margin: '32px auto 48px',
                     padding: '0 48px',
                 }}
             >
@@ -1026,7 +766,7 @@ export function LendingPage(): JSX.Element {
                 }}>
                     <StatCard label="Total Loans" value={stats.totalLoans} decimals={0} icon="📋" />
                     <StatCard label="Active Loans" value={stats.activeLoans} decimals={0} icon="🔥" />
-                    <StatCard label="Total Volume" value={stats.totalVolume} decimals={0} suffix="sats" icon="📊" />
+                    <StatCard label="Total Volume" value={stats.totalVolume} decimals={0} suffix="tokens" icon="📊" />
                     <StatCard label="Repaid" value={stats.totalRepaid} decimals={0} icon="✅" />
                 </div>
             </motion.section>
@@ -1090,13 +830,84 @@ export function LendingPage(): JSX.Element {
                                 <GlassCard glow="orange" style={{ maxWidth: '640px', marginBottom: theme.spacing.xxl, padding: '32px' }}>
                                     <h2 style={sectionTitleStyle}>Create Loan Request</h2>
 
+                                    {/* Approval status + Approve button */}
+                                    {form.collection && form.tokenId && (
+                                        <div style={{
+                                            padding: '12px 16px',
+                                            borderRadius: theme.radii.md,
+                                            background: approval.isApproved
+                                                ? 'rgba(20, 241, 149, 0.06)'
+                                                : 'rgba(255, 107, 0, 0.06)',
+                                            border: `1px solid ${approval.isApproved
+                                                ? 'rgba(20, 241, 149, 0.15)'
+                                                : 'rgba(255, 107, 0, 0.12)'}`,
+                                            marginBottom: '20px',
+                                            fontSize: theme.fontSize.sm,
+                                            color: theme.colors.text.secondary,
+                                            lineHeight: 1.5,
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            gap: '16px',
+                                        }}>
+                                            <div>
+                                                {approval.isChecking ? (
+                                                    'Checking NFT approval status...'
+                                                ) : approval.isApproved ? (
+                                                    <span style={{ color: theme.colors.status.success }}>
+                                                        ✓ NFT approved for lending contract
+                                                    </span>
+                                                ) : (
+                                                    'NFT must be approved before creating a loan. Click "Approve" to authorize.'
+                                                )}
+                                                {approval.error && (
+                                                    <div style={{ color: theme.colors.status.error, marginTop: '4px', fontSize: theme.fontSize.xs }}>
+                                                        {approval.error}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {!approval.isApproved && !approval.isChecking && (
+                                                <button
+                                                    onClick={() => approval.approve()}
+                                                    disabled={approval.isPending}
+                                                    style={{
+                                                        ...(approval.isPending ? buttonDisabledStyle : buttonStyle),
+                                                        padding: '8px 20px',
+                                                        fontSize: theme.fontSize.sm,
+                                                        whiteSpace: 'nowrap',
+                                                        flexShrink: 0,
+                                                    }}
+                                                >
+                                                    {approval.isPending ? 'Approving...' : 'Approve NFT'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Info note (shown when no collection/token entered yet) */}
+                                    {(!form.collection || !form.tokenId) && (
+                                        <div style={{
+                                            padding: '12px 16px',
+                                            borderRadius: theme.radii.md,
+                                            background: 'rgba(255, 107, 0, 0.06)',
+                                            border: '1px solid rgba(255, 107, 0, 0.12)',
+                                            marginBottom: '20px',
+                                            fontSize: theme.fontSize.sm,
+                                            color: theme.colors.text.secondary,
+                                            lineHeight: 1.5,
+                                        }}>
+                                            Enter collection address and token ID to check approval status.
+                                            The NFT will be locked as collateral until the loan is repaid or cancelled.
+                                        </div>
+                                    )}
+
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                         {/* Collection Address */}
                                         <div>
                                             <label style={labelStyle}>Collection Address</label>
                                             <input
                                                 type="text"
-                                                placeholder="bc1p..."
+                                                placeholder="opt1... or 0x..."
                                                 value={form.collection}
                                                 onChange={(e) => updateField('collection', e.target.value)}
                                                 style={inputStyle}
@@ -1124,7 +935,7 @@ export function LendingPage(): JSX.Element {
                                                         onChange={(e) => updateField('paymentToken', e.target.value)}
                                                         style={selectStyle}
                                                     >
-                                                        {PAYMENT_TOKENS.map((token) => (
+                                                        {PAYMENT_TOKEN_NAMES.map((token) => (
                                                             <option key={token} value={token}>{token}</option>
                                                         ))}
                                                     </select>
@@ -1140,7 +951,7 @@ export function LendingPage(): JSX.Element {
                                         {/* Loan Amount + Duration — side by side */}
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                             <div>
-                                                <label style={labelStyle}>Loan Amount (sats)</label>
+                                                <label style={labelStyle}>Loan Amount (tokens)</label>
                                                 <input
                                                     type="number"
                                                     placeholder="100000"
@@ -1212,12 +1023,26 @@ export function LendingPage(): JSX.Element {
                                             </div>
                                         </div>
 
+                                        {/* Error display */}
+                                        {formError && (
+                                            <div style={{
+                                                padding: '10px 14px',
+                                                borderRadius: theme.radii.md,
+                                                background: 'rgba(239, 68, 68, 0.08)',
+                                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                                color: theme.colors.status.error,
+                                                fontSize: theme.fontSize.sm,
+                                            }}>
+                                                {formError}
+                                            </div>
+                                        )}
+
                                         {/* Submit Button */}
                                         <button
                                             onClick={handleCreateLoan}
-                                            disabled={actionLoading === 'create' || !form.collection || !form.tokenId || !form.loanAmount}
+                                            disabled={actionLoading === 'create' || !form.collection || !form.tokenId || !form.loanAmount || !form.paymentToken}
                                             style={{
-                                                ...(actionLoading === 'create' || !form.collection || !form.tokenId || !form.loanAmount
+                                                ...(actionLoading === 'create' || !form.collection || !form.tokenId || !form.loanAmount || !form.paymentToken
                                                     ? buttonDisabledStyle
                                                     : buttonStyle),
                                                 width: '100%',
@@ -1332,6 +1157,8 @@ export function LendingPage(): JSX.Element {
                                                 : 'Fund Loan'
                                             }
                                             onAction={handleFundLoan}
+                                            onApproveTokens={walletAddr ? handleApproveTokens : undefined}
+                                            isApproving={actionLoading === `approve-${loan.id}`}
                                             showBorrower
                                             disabled={!walletAddr || actionLoading === `fund-${loan.id}`}
                                         />

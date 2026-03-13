@@ -8,10 +8,10 @@
  */
 
 import { useCallback, useRef } from 'react';
-import { Address } from '@btc-vision/transaction';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { ContractService } from '@/services/ContractService';
 import type { ForgeNetwork } from '@/config/contracts';
+import { resolveAddress } from '@/utils/address';
 import { useTransaction, type UseTransactionOptions } from './useTransaction';
 import { stakingKeys } from './useStaking';
 
@@ -41,46 +41,41 @@ export function useStakingActions(options: UseStakingActionsOptions) {
         stakingKeys.all(network),
     ];
 
-    const tx = useTransaction({ ...txOptions, invalidateKeys });
+    const tx = useTransaction({ label: 'Staking', ...txOptions, invalidateKeys });
 
     /**
      * Stake an NFT into a pool.
      * NOTE: The NFT must be approved for the StakingRewards contract first.
      *
+     * The collection is already stored on-chain per pool — no need to pass it.
+     *
      * @param poolId Pool ID to stake into
-     * @param collection Collection contract address (hex)
      * @param tokenId Token ID to stake
      * @param lockDurationBlocks Lock duration in blocks (0 for no lock)
-     * @param rarityTier Rarity tier for multiplier (0 if none)
      */
     const stake = useCallback(async (
         poolId: bigint,
-        collection: string,
         tokenId: bigint,
         lockDurationBlocks: bigint = 0n,
-        rarityTier: bigint = 0n,
     ) => {
         if (!walletAddrRef.current) throw new Error('Wallet not connected');
 
         return tx.execute(async () => {
             const staking = ContractService.getStaking(network);
             staking.setSender(walletAddrRef.current!);
-            const collectionAddr = Address.fromString(collection);
-            return await staking.stake(poolId, collectionAddr, tokenId, lockDurationBlocks, rarityTier);
+            return await staking.stake(poolId, tokenId, lockDurationBlocks);
         });
     }, [walletAddr, network, tx]);
 
     /**
      * Unstake an NFT from a pool.
-     * Lock period must have ended.
+     * Lock period must have ended. Claims pending rewards automatically.
      *
      * @param poolId Pool ID
-     * @param collection Collection contract address (hex)
      * @param tokenId Token ID to unstake
      */
     const unstake = useCallback(async (
         poolId: bigint,
-        collection: string,
         tokenId: bigint,
     ) => {
         if (!walletAddrRef.current) throw new Error('Wallet not connected');
@@ -88,8 +83,7 @@ export function useStakingActions(options: UseStakingActionsOptions) {
         return tx.execute(async () => {
             const staking = ContractService.getStaking(network);
             staking.setSender(walletAddrRef.current!);
-            const collectionAddr = Address.fromString(collection);
-            return await staking.unstake(poolId, collectionAddr, tokenId);
+            return await staking.unstake(poolId, tokenId);
         });
     }, [walletAddr, network, tx]);
 
@@ -131,8 +125,8 @@ export function useStakingActions(options: UseStakingActionsOptions) {
         return tx.execute(async () => {
             const staking = ContractService.getStaking(network);
             staking.setSender(walletAddrRef.current!);
-            const collectionAddr = Address.fromString(collection);
-            const rewardAddr = Address.fromString(rewardToken);
+            const collectionAddr = await resolveAddress(collection, network);
+            const rewardAddr = await resolveAddress(rewardToken, network);
             return await staking.createPool(collectionAddr, rewardAddr, rewardPerBlock, startBlock, endBlock);
         });
     }, [walletAddr, network, tx]);

@@ -7,6 +7,14 @@
             "onlyOwner": false,
             "inputs": [
                 {
+                    "name": "name",
+                    "type": "STRING"
+                },
+                {
+                    "name": "symbol",
+                    "type": "STRING"
+                },
+                {
                     "name": "maxSupply",
                     "type": "UINT256"
                 },
@@ -127,6 +135,31 @@
                     "type": "BOOL"
                 }
             ]
+        },
+        {
+            "name": "changeMetadata",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "icon",
+                    "type": "STRING"
+                },
+                {
+                    "name": "banner",
+                    "type": "STRING"
+                },
+                {
+                    "name": "description",
+                    "type": "STRING"
+                },
+                {
+                    "name": "website",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": []
         },
         {
             "name": "setMintPrice",

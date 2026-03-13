@@ -1,12 +1,12 @@
 /**
- * useDeployCollection — 3-4 TX collection deployment flow.
+ * useDeployCollection — 2-3 TX collection deployment flow.
  *
  * TX1: Deploy WASM (no calldata) -> onDeployment() stores owner.
- * TX2: initialize(maxSupply, mintPrice, royaltyBps, royaltyRecipient) -> 4 numeric params only.
- *      Calls instantiate() with placeholder name/symbol to avoid VM OOM.
- * TX3: setCollectionInfo(name, symbol) -> writes real name/symbol.
- *      Separate TX to avoid string parsing + instantiate() in one TX.
- * TX4: (optional) changeMetadata(icon, banner, desc, website) -> branding.
+ * TX2: initialize(name, symbol, maxSupply, mintPrice, royaltyBps, royaltyRecipient)
+ *      -> 6 params, sets name/symbol + numeric config in one TX.
+ * TX3: (optional) changeMetadata(icon, banner, desc, website) -> branding.
+ *
+ * Base URI can be set post-deployment via setBaseURI() on the collection page.
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -43,10 +43,9 @@ export type DeployStatus =
     | 'idle'
     | 'deploying'      // TX1: wallet popup for deploy
     | 'waiting'         // Waiting for deploy TX to be mined
-    | 'initializing'    // TX2: wallet popup for initialize (4 numeric params)
+    | 'initializing'    // TX2: wallet popup for initialize (6 params)
     | 'verifying'       // Polling isInitialized() to verify TX2 took effect
-    | 'naming'          // TX3: wallet popup for setCollectionInfo (name, symbol)
-    | 'branding'        // TX4: wallet popup for changeMetadata (optional)
+    | 'branding'        // TX3: wallet popup for changeMetadata (optional)
     | 'confirmed'       // All TXs done
     | 'error';
 
@@ -182,7 +181,7 @@ export function useDeployCollection(): UseDeployCollectionReturn {
     ): Promise<string | undefined> => {
         abortRef.current = false;
 
-        console.log('[FORGE] Starting 3-4 TX deployment flow:', params);
+        console.log('[FORGE] Starting 2-3 TX deployment flow:', params);
 
         if (!walletAddress || !walletAddr) {
             setError('Please connect your wallet first');
@@ -287,12 +286,12 @@ export function useDeployCollection(): UseDeployCollectionReturn {
             if (abortRef.current) return undefined;
 
             /* ========================================================== */
-            /*  TX2: initialize() — 4 numeric params only, NO strings     */
-            /*  Calls instantiate() with placeholder name/symbol ('_')    */
+            /*  TX2: initialize() — 6 params (name, symbol + 4 numbers)   */
+            /*  Sets name/symbol + numeric config in one TX               */
             /* ========================================================== */
 
             setStatus('initializing');
-            console.log('[FORGE] Initializing collection (TX2 — 4 numeric params)...');
+            console.log('[FORGE] Initializing collection (TX2 — 6 params)...');
 
             // Resolve royalty recipient to Address
             const royaltyHex = params.royaltyRecipient.startsWith('opt1')
@@ -310,8 +309,10 @@ export function useDeployCollection(): UseDeployCollectionReturn {
             );
             collection.setSender(walletAddr);
 
-            // Simulate initialize() with 4 numeric params only — NO strings
+            // Simulate initialize() with 6 params
             const callResult = await collection.initialize(
+                params.name,
+                params.symbol,
                 BigInt(params.supply),
                 params.mintPrice,
                 params.royaltyBps,
@@ -373,43 +374,7 @@ export function useDeployCollection(): UseDeployCollectionReturn {
             if (abortRef.current) return undefined;
 
             /* ========================================================== */
-            /*  TX3: setCollectionInfo(name, symbol) — strings only        */
-            /*  Separate from initialize() to avoid VM OOM                 */
-            /* ========================================================== */
-
-            setStatus('naming');
-            console.log('[FORGE] Setting collection name + symbol (TX3)...');
-
-            const collection2 = getContract<ICollectionTemplateContract>(
-                collectionAddrStr, COLLECTION_TEMPLATE_ABI, provider, net,
-            );
-            collection2.setSender(walletAddr);
-
-            const nameResult = await collection2.setCollectionInfo(
-                params.name,
-                params.symbol,
-            );
-
-            if ('error' in nameResult && nameResult.error) {
-                throw new Error(`setCollectionInfo simulation failed: ${String(nameResult.error)}`);
-            }
-
-            const nameReceipt = await nameResult.sendTransaction({
-                signer: signer ?? null,
-                mldsaSigner: null,
-                refundTo: walletAddress,
-                maximumAllowedSatToSpend: 500_000n,
-                network: walletNetwork,
-            });
-
-            const nameTxId = nameReceipt.transactionId;
-            console.log(`[FORGE] setCollectionInfo TX broadcast: ${nameTxId}`);
-            setTxHash(nameTxId);
-
-            if (abortRef.current) return undefined;
-
-            /* ========================================================== */
-            /*  TX4: (Optional) changeMetadata() — branding                */
+            /*  TX3: (Optional) changeMetadata() — branding                */
             /*  Only if user provided icon/banner/description/website      */
             /* ========================================================== */
 
@@ -417,14 +382,14 @@ export function useDeployCollection(): UseDeployCollectionReturn {
 
             if (hasBranding) {
                 setStatus('branding');
-                console.log('[FORGE] Setting branding (TX4 — changeMetadata)...');
+                console.log('[FORGE] Setting branding (TX3 — changeMetadata)...');
 
-                const collection3 = getContract<ICollectionTemplateContract>(
+                const collection2 = getContract<ICollectionTemplateContract>(
                     collectionAddrStr, COLLECTION_TEMPLATE_ABI, provider, net,
                 );
-                collection3.setSender(walletAddr);
+                collection2.setSender(walletAddr);
 
-                const brandResult = await collection3.changeMetadata(
+                const brandResult = await collection2.changeMetadata(
                     params.icon || '',
                     params.banner || '',
                     params.description || '',
@@ -453,7 +418,7 @@ export function useDeployCollection(): UseDeployCollectionReturn {
             /*  Kick off force-enrich so it shows on launchpad ASAP       */
             /* ========================================================== */
 
-            console.log(`[FORGE] Collection deployed + initialized + named at: ${collectionAddrStr}`);
+            console.log(`[FORGE] Collection deployed + initialized at: ${collectionAddrStr}`);
 
             // Fire-and-forget: tell backend to enrich metadata from chain now
             IndexerAPI.enrichCollection(collectionAddrStr, String(walletAddress)).catch((err) => {
@@ -464,9 +429,21 @@ export function useDeployCollection(): UseDeployCollectionReturn {
             return collectionAddrStr;
 
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            let message = err instanceof Error ? err.message : String(err);
             console.error('[FORGE] Deployment error:', message);
-            setError(message);
+
+            // Clean up OPNet error prefixes for user-friendly display
+            message = message
+                .replace(/^Error in calling function:\s*/i, '')
+                .replace(/^OP_NET:\s*/i, '')
+                .replace(/^Execution reverted\s*/i, '')
+                .trim();
+
+            if (/revert error too long/i.test(message)) {
+                message = 'Contract call reverted. This may be a transient VM issue — please try again.';
+            }
+
+            setError(message || 'Unknown deployment error');
             setStatus('error');
             return undefined;
         }

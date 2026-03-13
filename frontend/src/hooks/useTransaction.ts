@@ -19,6 +19,7 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import type { CallResult, InteractionTransactionReceipt } from 'opnet';
 import type { ContractDecodedObjectResult } from 'opnet';
 import type { PsbtOutputExtended } from '@btc-vision/bitcoin';
+import { useTxToast } from '@/contexts/TxToastContext';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -38,6 +39,8 @@ export interface TransactionState {
 }
 
 export interface UseTransactionOptions {
+    /** Human-readable label for toast notifications (e.g. "Buy NFT", "Mint") */
+    label?: string;
     /** React Query cache keys to invalidate after success */
     invalidateKeys?: QueryKey[];
     /** Callback on successful confirmation */
@@ -71,9 +74,10 @@ export interface UseTransactionReturn extends TransactionState {
 /* ------------------------------------------------------------------ */
 
 export function useTransaction(options: UseTransactionOptions = {}): UseTransactionReturn {
-    const { invalidateKeys = [], onSuccess, onError } = options;
+    const { label = 'Transaction', invalidateKeys = [], onSuccess, onError } = options;
     const queryClient = useQueryClient();
     const { signer, network, walletAddress } = useWalletConnect();
+    const { showTxToast } = useTxToast();
 
     const [status, setStatus] = useState<TransactionStatus>('idle');
     const [txHash, setTxHash] = useState<string | null>(null);
@@ -145,6 +149,15 @@ export function useTransaction(options: UseTransactionOptions = {}): UseTransact
             const hash = receipt.transactionId;
             setTxHash(hash);
 
+            // Show success toast with explorer link
+            showTxToast({
+                type: 'success',
+                title: `${label} Confirmed`,
+                message: 'Transaction broadcast to the network successfully.',
+                txHash: hash,
+                network: 'op_testnet',
+            });
+
             // Invalidate React Query caches
             for (const key of invalidateKeys) {
                 await queryClient.invalidateQueries({ queryKey: key });
@@ -153,9 +166,38 @@ export function useTransaction(options: UseTransactionOptions = {}): UseTransact
             onSuccess?.(hash);
             return receipt;
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            setError(message);
+            const rawMessage = err instanceof Error ? err.message : String(err);
+            console.error('[FORGE][tx] Error:', rawMessage);
+
+            let message = rawMessage;
+
+            // Clean up common OPNet error prefixes for better UX
+            message = message
+                .replace(/^Error in calling function:\s*/i, '')
+                .replace(/^OP_NET:\s*/i, '')
+                .replace(/^Execution reverted\s*/i, '')
+                .replace(/^Simulation failed:\s*/i, '')
+                .trim();
+
+            // If the VM reports "revert error too long", the contract
+            // reverted but the custom abort handler stripped the error message.
+            // Pre-flight checks (ownership, approval, params) should catch most
+            // issues before this point. If we get here, it's likely that the
+            // contract is paused or there's an on-chain state mismatch.
+            if (/revert error too long/i.test(message)) {
+                message = `${label} was rejected by the contract. If pre-flight checks passed, the contract may be paused or there is an on-chain state conflict. Try again or check the contract status.`;
+            }
+
+            setError(message || 'Unknown error');
             setStatus('error');
+
+            // Show error toast
+            showTxToast({
+                type: 'error',
+                title: `${label} Failed`,
+                message: message || 'Unknown error',
+            });
+
             onError?.(err instanceof Error ? err : new Error(message));
             return undefined;
         }

@@ -1,5 +1,5 @@
 /**
- * useCollectionActions — Write hooks for CollectionTemplate v12 admin operations.
+ * useCollectionActions — Write hooks for CollectionTemplate admin operations.
  *
  * Actions:
  * - setMintOpen: toggle minting on/off
@@ -7,14 +7,22 @@
  * - setSalePhase: set sale phase (0=inactive, 2=public, 3=ended)
  * - airdrop: owner mints to any recipient
  * - changeMetadata: update collection branding (icon, banner, description, website)
+ * - setBaseUri: set the base URI for token metadata (needed for NFT images)
  * - approveNFT: approve operator for a specific token
+ *
+ * Owner-only operations pre-check collectionOwner() via a view call
+ * before simulating the write. This avoids the opaque "Revert error
+ * too long" VM error on older WASM contracts and gives users clear
+ * error messages instead.
  */
 
 import { useCallback, useRef } from 'react';
-import { Address } from '@btc-vision/transaction';
 import { useWalletConnect } from '@btc-vision/walletconnect';
+import type { Address } from '@btc-vision/transaction';
 import { ContractService } from '@/services/ContractService';
+import type { ICollectionTemplateContract } from '@/contracts/abis/CollectionTemplateABI';
 import type { ForgeNetwork } from '@/config/contracts';
+import { resolveAddress } from '@/utils/address';
 import { useTransaction, type UseTransactionOptions } from './useTransaction';
 import { collectionKeys } from './useCollectionData';
 
@@ -48,7 +56,41 @@ export function useCollectionActions(options: UseCollectionActionsOptions) {
         collectionKeys.all(network, collectionAddress),
     ];
 
-    const tx = useTransaction({ ...txOptions, invalidateKeys });
+    const tx = useTransaction({ label: 'Collection', ...txOptions, invalidateKeys });
+
+    /**
+     * Helper: get a fresh contract instance with sender set.
+     * Clears cache first to avoid stale getPublicKeyInfo.
+     */
+    const getContract = useCallback((addr: Address) => {
+        ContractService.clearCacheFor(collectionAddress, network);
+        const contract = ContractService.getCollection(collectionAddress, network);
+        contract.setSender(addr);
+        return contract;
+    }, [collectionAddress, network]);
+
+    /**
+     * Pre-check: verify the connected wallet is the collection owner.
+     * Uses a view call (always works, even on old WASM with long-message abort).
+     * Throws a clear error message instead of the opaque "Revert error too long".
+     */
+    const verifyOwnership = useCallback(async (contract: ICollectionTemplateContract, walletAddr: Address) => {
+        try {
+            const ownerResult = await contract.collectionOwner();
+            const ownerHex = ownerResult?.properties?.owner;
+            if (ownerHex) {
+                // Compare lowercase hex — wallet address may be in different format
+                const ownerNorm = String(ownerHex).toLowerCase().replace(/^0x/, '');
+                const walletNorm = String(walletAddr).toLowerCase().replace(/^0x/, '');
+                if (ownerNorm !== walletNorm) {
+                    throw new Error('You are not the owner of this collection. Only the deployer can perform this action.');
+                }
+            }
+        } catch (e) {
+            // Re-throw our clear error, swallow others (older contracts may not have collectionOwner)
+            if (e instanceof Error && e.message.includes('not the owner')) throw e;
+        }
+    }, []);
 
     /**
      * Toggle minting on/off. Owner only.
@@ -58,15 +100,11 @@ export function useCollectionActions(options: UseCollectionActionsOptions) {
         if (!addr) throw new Error('Wallet not connected');
 
         return tx.execute(async () => {
-            // Clear cached instance so getPublicKeyInfo is re-queried
-            // (SDK caches a null/undefined Address permanently if the first
-            //  RPC call for this contract fails, e.g. right after deploy)
-            ContractService.clearCacheFor(collectionAddress, network);
-            const contract = ContractService.getCollection(collectionAddress, network);
-            contract.setSender(addr);
+            const contract = getContract(addr);
+            await verifyOwnership(contract, addr);
             return await contract.setMintOpen(open);
         });
-    }, [collectionAddress, network, tx]);
+    }, [collectionAddress, network, tx, getContract, verifyOwnership]);
 
     /**
      * Update mint price. Owner only.
@@ -76,12 +114,11 @@ export function useCollectionActions(options: UseCollectionActionsOptions) {
         if (!addr) throw new Error('Wallet not connected');
 
         return tx.execute(async () => {
-            ContractService.clearCacheFor(collectionAddress, network);
-            const contract = ContractService.getCollection(collectionAddress, network);
-            contract.setSender(addr);
+            const contract = getContract(addr);
+            await verifyOwnership(contract, addr);
             return await contract.setMintPrice(price);
         });
-    }, [collectionAddress, network, tx]);
+    }, [collectionAddress, network, tx, getContract, verifyOwnership]);
 
     /**
      * Airdrop — owner mints to any recipient. No price, no limits.
@@ -91,13 +128,12 @@ export function useCollectionActions(options: UseCollectionActionsOptions) {
         if (!addr) throw new Error('Wallet not connected');
 
         return tx.execute(async () => {
-            ContractService.clearCacheFor(collectionAddress, network);
-            const contract = ContractService.getCollection(collectionAddress, network);
-            contract.setSender(addr);
-            const recipientAddr = Address.fromString(recipient);
+            const contract = getContract(addr);
+            await verifyOwnership(contract, addr);
+            const recipientAddr = await resolveAddress(recipient, network);
             return await contract.airdrop(recipientAddr, quantity);
         });
-    }, [collectionAddress, network, tx]);
+    }, [collectionAddress, network, tx, getContract, verifyOwnership]);
 
     /**
      * Set sale phase. Owner only.
@@ -108,12 +144,11 @@ export function useCollectionActions(options: UseCollectionActionsOptions) {
         if (!addr) throw new Error('Wallet not connected');
 
         return tx.execute(async () => {
-            ContractService.clearCacheFor(collectionAddress, network);
-            const contract = ContractService.getCollection(collectionAddress, network);
-            contract.setSender(addr);
+            const contract = getContract(addr);
+            await verifyOwnership(contract, addr);
             return await contract.setSalePhase(phase);
         });
-    }, [collectionAddress, network, tx]);
+    }, [collectionAddress, network, tx, getContract, verifyOwnership]);
 
     /**
      * Update collection branding (icon, banner, description, website). Deployer only.
@@ -128,12 +163,26 @@ export function useCollectionActions(options: UseCollectionActionsOptions) {
         if (!addr) throw new Error('Wallet not connected');
 
         return tx.execute(async () => {
-            ContractService.clearCacheFor(collectionAddress, network);
-            const contract = ContractService.getCollection(collectionAddress, network);
-            contract.setSender(addr);
+            const contract = getContract(addr);
+            await verifyOwnership(contract, addr);
             return await contract.changeMetadata(icon, banner, description, website);
         });
-    }, [collectionAddress, network, tx]);
+    }, [collectionAddress, network, tx, getContract, verifyOwnership]);
+
+    /**
+     * Set the base URI for token metadata. Owner only.
+     * e.g. "ipfs://QmXyz/" → tokenURI(1) returns "ipfs://QmXyz/1.json"
+     */
+    const setBaseUri = useCallback(async (baseUri: string) => {
+        const addr = walletAddrRef.current;
+        if (!addr) throw new Error('Wallet not connected');
+
+        return tx.execute(async () => {
+            const contract = getContract(addr);
+            await verifyOwnership(contract, addr);
+            return await contract.setBaseURI(baseUri);
+        });
+    }, [collectionAddress, network, tx, getContract, verifyOwnership]);
 
     /**
      * Approve an operator for a specific token (needed before listing/staking/auctioning).
@@ -143,13 +192,11 @@ export function useCollectionActions(options: UseCollectionActionsOptions) {
         if (!addr) throw new Error('Wallet not connected');
 
         return tx.execute(async () => {
-            ContractService.clearCacheFor(collectionAddress, network);
-            const contract = ContractService.getCollection(collectionAddress, network);
-            contract.setSender(addr);
-            const operatorAddr = Address.fromString(operator);
+            const contract = getContract(addr);
+            const operatorAddr = await resolveAddress(operator, network);
             return await contract.approve(operatorAddr, tokenId);
         });
-    }, [collectionAddress, network, tx]);
+    }, [collectionAddress, network, tx, getContract]);
 
     return {
         ...tx,
@@ -158,6 +205,7 @@ export function useCollectionActions(options: UseCollectionActionsOptions) {
         setSalePhase,
         airdrop,
         changeMetadata,
+        setBaseUri,
         approveNFT,
     };
 }

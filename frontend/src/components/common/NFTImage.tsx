@@ -83,8 +83,15 @@ export function NFTImage({
 
         async function fetchImage() {
             try {
-                const metaUri = `${baseUri}${tokenId}.json`;
-                const json = await fetchMetadataWithFallback(metaUri);
+                // OP721 contract's tokenURI() returns baseURI + tokenId (no ".json").
+                // Try without extension first, then with ".json" as fallback.
+                const metaUriNoExt = `${baseUri}${tokenId}`;
+                const metaUriJson = `${baseUri}${tokenId}.json`;
+
+                let json = await fetchMetadataWithFallback(metaUriNoExt);
+                if (!json && !cancelled) {
+                    json = await fetchMetadataWithFallback(metaUriJson);
+                }
                 if (!json || cancelled) {
                     if (!cancelled) setError(true);
                     return;

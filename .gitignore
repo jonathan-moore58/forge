@@ -1,8 +1,41 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
 build/
 *.wasm
+
+# Environment & secrets — NEVER commit these
 .env
+.env.*
+.env.local
+.env.production
+
+# SQLite database files
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
+
+# Claude Code local artifacts
+.claude/settings.local.json
 .claude/loop/
+.claude/worktrees/
+
+# Windows artifacts
+nul
+
+# Debug/test scripts (may contain RPC URLs or addresses)
+backend/test-*.mjs
+backend/test-*.ts
+frontend/test-*.mjs
+frontend/test-*.ts
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

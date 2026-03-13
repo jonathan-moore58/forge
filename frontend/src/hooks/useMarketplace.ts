@@ -7,10 +7,10 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { Address } from '@btc-vision/transaction';
 import { ContractService } from '@/services/ContractService';
 import { CONTRACT_ADDRESSES, type ForgeNetwork } from '@/config/contracts';
 import { IndexerAPI, type IndexerListing } from '@/services/IndexerAPI';
+import { resolveAddress } from '@/utils/address';
 import type { ListingData, OfferData, MarketStats, CollectionStatsData } from '@/contracts/abis';
 
 /* ------------------------------------------------------------------ */
@@ -58,7 +58,7 @@ export function useCollectionStats(network: ForgeNetwork, collection: string | u
         queryKey: marketKeys.collectionStats(network, collection ?? ''),
         queryFn: async (): Promise<CollectionStatsData> => {
             const market = ContractService.getMarketplace(network);
-            const collectionAddr = Address.fromString(collection!);
+            const collectionAddr = await resolveAddress(collection!, network);
             const result = await market.collectionStats(collectionAddr);
             return result.properties;
         },
@@ -108,7 +108,7 @@ export function useListingForNFT(network: ForgeNetwork, collection: string | und
         queryKey: marketKeys.listingForNFT(network, collection ?? '', tokenId?.toString() ?? ''),
         queryFn: async () => {
             const market = ContractService.getMarketplace(network);
-            const collectionAddr = Address.fromString(collection!);
+            const collectionAddr = await resolveAddress(collection!, network);
             const result = await market.getListingForNFT(collectionAddr, tokenId!);
             return result.properties.listingId;
         },

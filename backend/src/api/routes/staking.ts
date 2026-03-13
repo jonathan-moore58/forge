@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../../db/connection.js';
 import { parsePagination } from '../../types/api.js';
+import { addressToRawHex } from '../../utils/address.js';
 
 export function stakingRoutes(): Router {
     const router = Router();
@@ -19,7 +20,8 @@ export function stakingRoutes(): Router {
 
         if (req.query.staker) {
             conditions.push('staker = @staker');
-            params.staker = req.query.staker as string;
+            // Convert bech32m → hex to match DB format
+            params.staker = addressToRawHex(req.query.staker as string);
         }
         if (req.query.collection) {
             conditions.push('collection_address = @collection');

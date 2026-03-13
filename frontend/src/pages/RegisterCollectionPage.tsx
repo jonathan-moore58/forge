@@ -261,7 +261,7 @@ export function RegisterCollectionPage(): JSX.Element {
                                     type="text"
                                     value={addressInput}
                                     onChange={(e) => setAddressInput(e.target.value)}
-                                    placeholder="Enter OPNet contract address (hex)"
+                                    placeholder="opt1sq... or 0x hex address"
                                     style={inputStyle}
                                     disabled={isPending || isValidating}
                                 />
@@ -270,7 +270,7 @@ export function RegisterCollectionPage(): JSX.Element {
                                     color: theme.colors.text.tertiary,
                                     marginTop: theme.spacing.xs,
                                 }}>
-                                    The 64-character hex address of the deployed NFT collection contract.
+                                    Paste the collection's bech32m address (opt1sq...) or hex address (0x...).
                                 </p>
                             </div>
 

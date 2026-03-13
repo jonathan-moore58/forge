@@ -88,7 +88,7 @@ export function useUserPortfolio(
                 IndexerAPI.listings({ seller: walletAddress, status: 0 }),
                 ...collectionAddrs.map((addr) =>
                     IndexerAPI.collectionStats(addr).catch(() => ({
-                        data: { floor_price: null, total_volume: null, listed_count: 0, sales_count: 0, owner_count: 0 },
+                        data: { floorPrice: null, total_volume: null, listed_count: 0, sales_count: 0, owner_count: 0 },
                     })),
                 ),
             ]);
@@ -107,7 +107,7 @@ export function useUserPortfolio(
                 const info = collectionInfoMap.get(addr);
                 const stats = statsResults[i]?.data;
 
-                const floorPrice = stats?.floor_price ? BigInt(stats.floor_price) : 0n;
+                const floorPrice = stats?.floorPrice ? BigInt(stats.floorPrice) : 0n;
 
                 holdings.push({
                     collectionAddress: addr as string,

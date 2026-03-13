@@ -115,11 +115,13 @@ export interface IndexerActivity {
 }
 
 export interface CollectionStats {
-    floor_price: string | null;
-    total_volume: string | null;
-    listed_count: number;
-    sales_count: number;
-    owner_count: number;
+    floorPrice: string | null;
+    totalVolume: string | null;
+    listedCount: number;
+    salesCount: number;
+    ownerCount: number;
+    totalSupply?: number;
+    maxSupply?: number;
 }
 
 export interface GlobalStats {

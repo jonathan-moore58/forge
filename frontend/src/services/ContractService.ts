@@ -9,6 +9,7 @@
 
 import { getContract, type BaseContractProperties, type BitcoinInterfaceAbi } from 'opnet';
 import { networks } from '@btc-vision/bitcoin';
+import { Address } from '@btc-vision/transaction';
 import { ProviderService } from './ProviderService';
 import { CONTRACT_ADDRESSES, type ForgeNetwork } from '@/config/contracts';
 import {
@@ -19,6 +20,7 @@ import {
     AUCTION_HOUSE_ABI,
     STAKING_REWARDS_ABI,
     NFT_LENDING_ABI,
+    OP20_ABI,
     type INFTFactoryContract,
     type ICollectionTemplateContract,
     type ICollectionRegistryContract,
@@ -26,6 +28,7 @@ import {
     type IAuctionHouseContract,
     type IStakingRewardsContract,
     type INFTLendingContract,
+    type IOP20Contract,
 } from '@/contracts/abis';
 
 class _ContractService {
@@ -120,6 +123,36 @@ class _ContractService {
         const address = CONTRACT_ADDRESSES[network].lending;
         if (!address) throw new Error(`NFTLending not deployed on ${network}`);
         return this.getCached<INFTLendingContract>(address, network, NFT_LENDING_ABI);
+    }
+
+    /**
+     * Get an OP-20 token contract instance by address.
+     * Used for balance checks, allowance queries, and approval TXs.
+     *
+     * Accepts raw hex (64-char, with or without 0x) or bech32m.
+     * Raw hex is converted to an Address object so getContract()
+     * skips the getPublicKeyInfo RPC call (which only accepts bech32m).
+     */
+    getOP20(addressInput: string, network: ForgeNetwork): IOP20Contract {
+        const hex = addressInput.replace(/^0x/i, '');
+        const key = `${network}:op20:${hex}`;
+
+        if (!this.cache[key]) {
+            const provider = ProviderService.getProvider(network);
+            const net = _ContractService.getNetworkObj(network);
+
+            // If it looks like raw hex (64 chars), create Address directly
+            // to avoid getPublicKeyInfo RPC which only accepts bech32m.
+            if (/^[0-9a-f]{64}$/i.test(hex)) {
+                const addr = Address.fromString(hex);
+                this.cache[key] = getContract<IOP20Contract>(addr, OP20_ABI, provider, net);
+            } else {
+                // Assume bech32m — let SDK resolve via RPC
+                this.cache[key] = getContract<IOP20Contract>(addressInput, OP20_ABI, provider, net);
+            }
+        }
+
+        return this.cache[key] as ReturnType<typeof getContract<IOP20Contract>>;
     }
 
     /**
